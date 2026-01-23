@@ -1,0 +1,1555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Battle Alert - FTroop Notification System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Popup styles */
+        .member-popup {
+            display: none;
+            position: absolute;
+            background-color: var(--dark-gray);
+            border: 2px solid var(--primary-red);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            min-width: 250px;
+            max-width: 300px;
+        }
+        
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--primary-red);
+            padding-bottom: 10px;
+        }
+        
+        .popup-title {
+            font-size: 1.2rem;
+            color: var(--white);
+            font-weight: bold;
+        }
+        
+        .popup-close {
+            background: none;
+            border: none;
+            color: var(--light-gray);
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+        
+        .popup-content {
+            margin-bottom: 15px;
+        }
+        
+        .popup-info {
+            margin-bottom: 10px;
+        }
+        
+        .popup-info strong {
+            color: var(--primary-red);
+            display: inline-block;
+            width: 80px;
+        }
+        
+        .popup-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .popup-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .popup-btn-primary {
+            background-color: var(--primary-red);
+            color: var(--white);
+        }
+        
+        .popup-btn-primary:hover {
+            background-color: var(--dark-red);
+        }
+        
+        .popup-btn-secondary {
+            background-color: var(--medium-gray);
+            color: var(--white);
+        }
+        
+        .popup-btn-secondary:hover {
+            background-color: var(--dark-gray);
+        }
+        
+        .popup-btn-danger {
+            background-color: #d32f2f;
+            color: var(--white);
+        }
+        
+        .popup-btn-danger:hover {
+            background-color: #b71c1c;
+        }
+        
+        /* Quick access member list */
+        .quick-access-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+        }
+        
+        .quick-member {
+            padding: 8px 15px;
+            background-color: var(--dark-gray);
+            color: var(--white);
+            border: 1px solid var(--medium-gray);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+        
+        .quick-member:hover {
+            background-color: var(--primary-red);
+            border-color: var(--primary-red);
+            transform: translateY(-2px);
+        }
+        
+        .quick-member.selected {
+            background-color: var(--alert-red);
+            border-color: var(--alert-red);
+        }
+        
+        /* Selection info at top */
+        .selection-info {
+            padding: 15px;
+            background-color: rgba(255, 61, 0, 0.1);
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--alert-red);
+            display: none;
+        }
+        
+        .selected-members-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .selected-member-item {
+            display: inline-block;
+            background-color: var(--dark-red);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+        
+        .selection-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .send-to-selected-btn {
+            padding: 12px 25px;
+            background-color: var(--alert-red);
+            color: var(--white);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s;
+        }
+        
+        .send-to-selected-btn:hover:not(:disabled) {
+            background-color: var(--dark-red);
+        }
+        
+        .send-to-selected-btn:disabled {
+            background-color: var(--medium-gray);
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        
+        .clear-selection {
+            background: none;
+            border: none;
+            color: var(--light-red);
+            cursor: pointer;
+            font-size: 0.9rem;
+            text-decoration: underline;
+        }
+        
+        /* Table row selection */
+        .member-row.selected {
+            background-color: rgba(255, 61, 0, 0.2) !important;
+            border-left: 4px solid var(--alert-red);
+        }
+        
+        /* Notification Status */
+        .notification-status-box {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        
+        .notification-enabled {
+            background-color: rgba(76, 175, 80, 0.2);
+            border-left: 4px solid #4caf50;
+        }
+        
+        .notification-denied {
+            background-color: rgba(244, 67, 54, 0.2);
+            border-left: 4px solid #f44336;
+        }
+        
+        .notification-default {
+            background-color: rgba(33, 150, 243, 0.2);
+            border-left: 4px solid #2196f3;
+        }
+        
+        /* Registration Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background-color: var(--dark-gray);
+            padding: 30px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+        }
+        
+        .modal-title {
+            color: var(--white);
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--primary-red);
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            color: var(--white);
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--medium-gray);
+            border-radius: 4px;
+            background-color: var(--light-gray);
+            color: var(--black);
+            font-size: 1rem;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary-red);
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 25px;
+        }
+        
+        .form-btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .form-btn-primary {
+            background-color: var(--primary-red);
+            color: var(--white);
+        }
+        
+        .form-btn-primary:hover {
+            background-color: var(--dark-red);
+        }
+        
+        .form-btn-secondary {
+            background-color: var(--medium-gray);
+            color: var(--white);
+        }
+        
+        .form-btn-secondary:hover {
+            background-color: var(--dark-gray);
+        }
+        
+        .error-message {
+            color: var(--light-red);
+            font-size: 0.9rem;
+            margin-top: 5px;
+            display: none;
+        }
+        
+        .header-controls {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .register-btn {
+            padding: 10px 20px;
+            background-color: var(--white);
+            color: var(--primary-red);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .register-btn:hover {
+            background-color: var(--light-gray);
+        }
+        
+        .admin-btn {
+            padding: 10px 20px;
+            background-color: var(--alert-red);
+            color: var(--white);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .admin-btn:hover {
+            background-color: var(--dark-red);
+        }
+        
+        /* Success/Error message styling */
+        .message-box {
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .message-success {
+            background-color: rgba(76, 175, 80, 0.2);
+            color: #4caf50;
+            border-left: 4px solid #4caf50;
+        }
+        
+        .message-error {
+            background-color: rgba(211, 47, 47, 0.2);
+            color: var(--light-red);
+            border-left: 4px solid var(--primary-red);
+        }
+        
+        /* Admin Controls */
+        .admin-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .admin-control-btn {
+            padding: 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.3s;
+        }
+        
+        .admin-control-btn-danger {
+            background-color: #d32f2f;
+            color: var(--white);
+        }
+        
+        .admin-control-btn-danger:hover {
+            background-color: #b71c1c;
+        }
+        
+        .admin-control-btn-warning {
+            background-color: #ff9800;
+            color: var(--white);
+        }
+        
+        .admin-control-btn-warning:hover {
+            background-color: #f57c00;
+        }
+        
+        /* Password Modal */
+        .password-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--medium-gray);
+            border-radius: 4px;
+            background-color: var(--light-gray);
+            color: var(--black);
+            font-size: 1rem;
+            margin-bottom: 15px;
+        }
+        
+        /* Main CSS */
+        :root {
+            --primary-red: #d32f2f;
+            --dark-red: #b71c1c;
+            --light-red: #ff6659;
+            --black: #212121;
+            --dark-gray: #424242;
+            --medium-gray: #757575;
+            --light-gray: #f5f5f5;
+            --white: #ffffff;
+            --alert-red: #ff3d00;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: var(--black);
+            color: var(--white);
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background-color: var(--primary-red);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .logo-icon {
+            font-size: 2.5rem;
+            color: var(--white);
+        }
+        
+        .logo-text h1 {
+            font-size: 2.2rem;
+            color: var(--white);
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .logo-text p {
+            color: var(--light-gray);
+            font-size: 0.9rem;
+        }
+        
+        .stats-bar {
+            display: flex;
+            gap: 25px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--white);
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--light-gray);
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 30px;
+        }
+        
+        .card {
+            background-color: var(--dark-gray);
+            border-radius: 8px;
+            padding: 25px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            margin-bottom: 20px;
+        }
+        
+        .card-title {
+            color: var(--white);
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--primary-red);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .card-title i {
+            color: var(--primary-red);
+        }
+        
+        /* Updated search section layout */
+        .search-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .search-box input {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 4px;
+            background-color: var(--light-gray);
+            color: var(--black);
+            font-size: 1rem;
+        }
+        
+        .search-box button {
+            padding: 0 20px;
+            background-color: var(--primary-red);
+            color: var(--white);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        
+        .search-box button:hover {
+            background-color: var(--dark-red);
+        }
+        
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .filter-btn {
+            padding: 10px 20px;
+            background-color: var(--medium-gray);
+            color: var(--white);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .filter-btn.active {
+            background-color: var(--primary-red);
+        }
+        
+        .sort-options {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .sort-select {
+            padding: 10px;
+            border-radius: 4px;
+            background-color: var(--medium-gray);
+            color: var(--white);
+            border: 1px solid var(--primary-red);
+        }
+        
+        .sort-order {
+            background-color: transparent;
+            border: none;
+            color: var(--white);
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+        
+        .members-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        
+        .members-table th {
+            background-color: var(--primary-red);
+            color: var(--white);
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .members-table td {
+            padding: 15px;
+            border-bottom: 1px solid var(--medium-gray);
+            cursor: pointer;
+        }
+        
+        .members-table tr:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-safe {
+            background-color: #4caf50;
+        }
+        
+        .status-alert {
+            background-color: var(--alert-red);
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .alliance-list {
+            list-style-type: none;
+        }
+        
+        .alliance-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px;
+            background-color: rgba(255, 255, 255, 0.05);
+            margin-bottom: 10px;
+            border-radius: 4px;
+            border-left: 4px solid var(--primary-red);
+        }
+        
+        .alliance-name {
+            font-weight: bold;
+        }
+        
+        .alliance-count {
+            background-color: var(--primary-red);
+            color: white;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+        
+        .alert-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .alert-btn {
+            padding: 15px;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .alert-btn-primary {
+            background-color: var(--primary-red);
+            color: var(--white);
+        }
+        
+        .alert-btn-primary:hover {
+            background-color: var(--dark-red);
+        }
+        
+        .alert-btn-secondary {
+            background-color: var(--medium-gray);
+            color: var(--white);
+        }
+        
+        .alert-btn-secondary:hover {
+            background-color: var(--dark-gray);
+        }
+        
+        .dashboard-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .dashboard-stat {
+            background-color: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .dashboard-stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary-red);
+        }
+        
+        .dashboard-stat-label {
+            font-size: 0.9rem;
+            color: var(--medium-gray);
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            margin-top: 30px;
+            color: var(--medium-gray);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--medium-gray);
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 4px;
+            background-color: var(--primary-red);
+            color: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @media (max-width: 1100px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-bar {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            
+            .quick-access-list {
+                justify-content: center;
+            }
+            
+            .header-controls {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .search-box {
+                flex-direction: column;
+            }
+            
+            .filter-buttons {
+                flex-wrap: wrap;
+            }
+            
+            .dashboard-stats {
+                grid-template-columns: 1fr;
+            }
+            
+            .members-table {
+                display: block;
+                overflow-x: auto;
+            }
+            
+            .popup-actions {
+                flex-direction: column;
+            }
+            
+            .admin-controls {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Registration Modal -->
+    <div id="registration-modal" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-title"><i class="fas fa-user-plus"></i> Register New Gamer</h2>
+            
+            <div id="form-message" class="message-box">
+                <!-- Success/Error messages appear here -->
+            </div>
+            
+            <form id="registration-form">
+                <div class="form-group">
+                    <label for="gamer-name">Gamer Name *</label>
+                    <input type="text" id="gamer-name" required placeholder="Enter your unique gamer name">
+                    <div class="error-message" id="gamer-name-error">Gamer name is already taken</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="alliance-name">Alliance Name *</label>
+                    <select id="alliance-name" required>
+                        <option value="">Select an alliance</option>
+                        <option value="FTroop">FTroop</option>
+                        <option value="Alpha">Alpha</option>
+                        <option value="Beta">Beta</option>
+                        <option value="Gamma">Gamma</option>
+                        <option value="Delta">Delta</option>
+                        <option value="Omega">Omega</option>
+                        <option value="other">Other (specify below)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" id="custom-alliance-group" style="display: none;">
+                    <label for="custom-alliance">Custom Alliance Name *</label>
+                    <input type="text" id="custom-alliance" placeholder="Enter your alliance name">
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email (Optional)</label>
+                    <input type="email" id="email" placeholder="For notification updates">
+                </div>
+                
+                <div class="form-group">
+                    <label for="game-id">Game ID (Optional)</label>
+                    <input type="text" id="game-id" placeholder="Your in-game ID">
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="form-btn form-btn-secondary" id="cancel-registration">Cancel</button>
+                    <button type="submit" class="form-btn form-btn-primary">Register</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Admin Password Modal -->
+    <div id="admin-modal" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-title"><i class="fas fa-lock"></i> Admin Access Required</h2>
+            
+            <div id="admin-message" class="message-box">
+                <!-- Admin messages appear here -->
+            </div>
+            
+            <div class="form-group">
+                <label for="admin-password">Admin Password</label>
+                <input type="password" id="admin-password" class="password-input" placeholder="Enter admin password">
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="form-btn form-btn-secondary" id="cancel-admin">Cancel</button>
+                <button type="button" class="form-btn form-btn-primary" id="submit-admin-password">Access Admin</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Delete Member Modal -->
+    <div id="delete-modal" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-title"><i class="fas fa-trash-alt"></i> Delete Gamer</h2>
+            
+            <div id="delete-message" class="message-box">
+                <!-- Delete messages appear here -->
+            </div>
+            
+            <div id="delete-member-info">
+                <!-- Member info will be shown here -->
+            </div>
+            
+            <div class="form-group">
+                <label for="confirm-delete-name">Type the gamer name to confirm deletion:</label>
+                <input type="text" id="confirm-delete-name" class="password-input" placeholder="Type the gamer name exactly">
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="form-btn form-btn-secondary" id="cancel-delete">Cancel</button>
+                <button type="button" class="form-btn form-btn-danger" id="confirm-delete">Delete Gamer</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Member Action Popup -->
+    <div class="member-popup" id="member-popup">
+        <div class="popup-header">
+            <div class="popup-title" id="popup-gamer-name">Gamer Name</div>
+            <button class="popup-close" id="popup-close">&times;</button>
+        </div>
+        <div class="popup-content">
+            <div class="popup-info">
+                <strong>Alliance:</strong> <span id="popup-alliance">Alliance</span>
+            </div>
+            <div class="popup-info">
+                <strong>Status:</strong> <span id="popup-status">Status</span>
+            </div>
+            <div class="popup-info">
+                <strong>Joined:</strong> <span id="popup-join-date">Date</span>
+            </div>
+            <div class="popup-info">
+                <strong>Last Alert:</strong> <span id="popup-last-alert">Never</span>
+            </div>
+        </div>
+        <div class="popup-actions">
+            <button class="popup-btn popup-btn-primary" id="popup-send-alert">
+                <i class="fas fa-bullhorn"></i> Send Alert
+            </button>
+            <button class="popup-btn popup-btn-secondary" id="popup-add-to-selection">
+                <i class="fas fa-plus"></i> Select
+            </button>
+            <button class="popup-btn popup-btn-danger" id="popup-delete-member" style="display: none;">
+                <i class="fas fa-trash-alt"></i> Delete
+            </button>
+        </div>
+    </div>
+    
+    <div class="container">
+        <header>
+            <div class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-bell"></i>
+                </div>
+                <div class="logo-text">
+                    <h1>Battle Alert</h1>
+                    <p>FTroop Notification System</p>
+                </div>
+            </div>
+            <div class="header-controls">
+                <div class="stats-bar">
+                    <div class="stat-item">
+                        <div class="stat-value" id="total-members">0</div>
+                        <div class="stat-label">Total Members</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="active-alerts">0</div>
+                        <div class="stat-label">Active Alerts</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="alliance-count">0</div>
+                        <div class="stat-label">Alliances</div>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button class="register-btn" id="open-registration">
+                        <i class="fas fa-user-plus"></i> Register Gamer
+                    </button>
+                    <button class="admin-btn" id="open-admin">
+                        <i class="fas fa-lock"></i> Admin Controls
+                    </button>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Quick Access Member List (TOP) -->
+        <div class="card">
+            <h2 class="card-title"><i class="fas fa-users"></i> Quick Access</h2>
+            <div class="quick-access-list" id="quick-access-list">
+                <!-- Quick access member buttons will be added here -->
+            </div>
+        </div>
+        
+        <!-- Selection Info -->
+        <div class="selection-info" id="selection-info">
+            <p><i class="fas fa-users"></i> <strong>Selected Members:</strong> <span id="selected-count">0</span> member(s) selected</p>
+            <div class="selected-members-list" id="selected-members-list"></div>
+            <div class="selection-controls">
+                <button class="send-to-selected-btn" id="send-to-selected-btn">
+                    <i class="fas fa-bullhorn"></i> Send Attack Notification
+                </button>
+                <button class="clear-selection" id="clear-selection">Clear Selection</button>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="left-column">
+                <!-- Search Section (BELOW quick access) -->
+                <div class="card search-section">
+                    <h2 class="card-title"><i class="fas fa-search"></i> Search & Filter</h2>
+                    
+                    <div class="search-box">
+                        <input type="text" id="search-input" placeholder="Search by gamer name OR alliance name...">
+                        <button id="search-btn"><i class="fas fa-search"></i> Search</button>
+                    </div>
+                    
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" data-filter="all">All</button>
+                        <button class="filter-btn" data-filter="gamer">Gamer Name</button>
+                        <button class="filter-btn" data-filter="alliance">Alliance</button>
+                    </div>
+                    
+                    <div class="sort-options">
+                        <span>Sort by:</span>
+                        <select class="sort-select" id="sort-select">
+                            <option value="gamer">Gamer Name</option>
+                            <option value="alliance">Alliance</option>
+                            <option value="date">Join Date</option>
+                        </select>
+                        <button class="sort-order" id="sort-order" data-order="asc">
+                            <i class="fas fa-arrow-up"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Full Members Table -->
+                <div class="card">
+                    <h2 class="card-title"><i class="fas fa-list"></i> All Members</h2>
+                    <div class="table-container">
+                        <table class="members-table">
+                            <thead>
+                                <tr>
+                                    <th>Status</th>
+                                    <th>Gamer Name</th>
+                                    <th>Alliance</th>
+                                    <th>Join Date</th>
+                                    <th>Last Alert</th>
+                                </tr>
+                            </thead>
+                            <tbody id="members-table-body">
+                                <!-- Member data loaded dynamically from Firestore -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="right-column">
+                <div class="card">
+                    <h2 class="card-title"><i class="fas fa-flag"></i> Alliance Breakdown</h2>
+                    <ul class="alliance-list" id="alliance-list">
+                        <!-- Alliance breakdown loaded dynamically -->
+                    </ul>
+                </div>
+                
+                <div class="card">
+                    <h2 class="card-title"><i class="fas fa-bullhorn"></i> Alert Controls</h2>
+                    <div class="alert-controls">
+                        <button class="alert-btn alert-btn-secondary" id="clear-all-alerts-btn">
+                            <i class="fas fa-check-circle"></i> Clear All Alerts
+                        </button>
+                    </div>
+                    <div style="margin-top: 15px; font-size: 0.9rem; color: var(--medium-gray);">
+                        <p><i class="fas fa-info-circle"></i> Click on any gamer name to send alerts</p>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h2 class="card-title"><i class="fas fa-chart-line"></i> Statistics Dashboard</h2>
+                    <div class="dashboard-stats">
+                        <div class="dashboard-stat">
+                            <div class="dashboard-stat-value" id="alerts-today">0</div>
+                            <div class="dashboard-stat-label">Alerts Today</div>
+                        </div>
+                        <div class="dashboard-stat">
+                            <div class="dashboard-stat-value" id="total-alerts">0</div>
+                            <div class="dashboard-stat-label">Total Alerts</div>
+                        </div>
+                        <div class="dashboard-stat">
+                            <div class="dashboard-stat-value" id="avg-response">--</div>
+                            <div class="dashboard-stat-label">Avg Response Time</div>
+                        </div>
+                        <div class="dashboard-stat">
+                            <div class="dashboard-stat-value" id="clear-rate">--</div>
+                            <div class="dashboard-stat-label">Alert Clear Rate</div>
+                        </div>
+                    </div>
+                    <div class="notification-settings" id="notification-status">
+                        <p><i class="fas fa-sync"></i> Real-time Data Sync Active</p>
+                    </div>
+                </div>
+                
+                <div class="card" id="admin-controls-card" style="display: none;">
+                    <h2 class="card-title"><i class="fas fa-lock"></i> Admin Controls</h2>
+                    <div class="admin-controls">
+                        <button class="admin-control-btn admin-control-btn-warning" id="reset-stats-btn">
+                            <i class="fas fa-redo"></i> Reset Statistics
+                        </button>
+                        <button class="admin-control-btn admin-control-btn-warning" id="reset-avg-response-btn">
+                            <i class="fas fa-clock"></i> Reset Avg Response Time
+                        </button>
+                        <button class="admin-control-btn admin-control-btn-danger" id="delete-gamer-btn">
+                            <i class="fas fa-trash-alt"></i> Delete Gamer
+                        </button>
+                        <button class="admin-control-btn admin-control-btn-secondary" id="lock-admin-btn">
+                            <i class="fas fa-lock"></i> Lock Admin
+                        </button>
+                    </div>
+                    <div style="margin-top: 15px; font-size: 0.9rem; color: var(--medium-gray);">
+                        <p><i class="fas fa-shield-alt"></i> Admin Mode: <span id="admin-status">Locked</span></p>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h2 class="card-title"><i class="fas fa-bell"></i> Notification Settings</h2>
+                    <div id="notification-status-container">
+                        <!-- Status will be shown here -->
+                    </div>
+                    <div class="alert-controls">
+                        <button class="alert-btn alert-btn-primary" id="enable-notifications-btn">
+                            <i class="fas fa-bell"></i> Enable Browser Notifications
+                        </button>
+                        <button class="alert-btn alert-btn-secondary" id="test-notification-btn" style="display: none;">
+                            <i class="fas fa-check"></i> Test Notification
+                        </button>
+                        <button class="alert-btn alert-btn-secondary" id="reset-notifications-btn" style="display: none;">
+                            <i class="fas fa-redo"></i> Reset Notification Settings
+                        </button>
+                    </div>
+                    <div style="margin-top: 15px; font-size: 0.9rem; color: var(--medium-gray);">
+                        <p><i class="fas fa-info-circle"></i> Get alerts on all devices when members are under attack</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Battle Alert - FTroop Notification System &copy; 2026</p>
+        </footer>
+    </div>
+    
+    <!-- Notification Toast -->
+    <div id="notification" class="notification" style="display: none;">
+        <i class="fas fa-bell"></i>
+        <span id="notification-text">Notification text here</span>
+    </div>
+    
+    <!-- Import Firebase modules -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { 
+            getFirestore, 
+            collection, 
+            getDocs, 
+            query, 
+            where, 
+            orderBy,
+            updateDoc,
+            addDoc,
+            deleteDoc,
+            doc,
+            Timestamp,
+            onSnapshot,
+            serverTimestamp
+        } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+        
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAqqujNlqmiqlVKXz6WBxfgSXnHP8gIqIk",
+            authDomain: "battle-alert.firebaseapp.com",
+            projectId: "battle-alert",
+            storageBucket: "battle-alert.firebasestorage.app",
+            messagingSenderId: "724267211096",
+            appId: "1:724267211096:web:8af6a8a63cf0eabb6bed2d"
+        };
+        
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        
+        // Application state
+        let members = [];
+        let alliances = {};
+        let currentFilter = "all";
+        let currentSort = "gamer";
+        let sortAscending = true;
+        let selectedMembers = new Set();
+        let existingGamerNames = new Set();
+        let currentPopupMember = null;
+        let isAdminMode = false;
+        let adminPassword = "FTroopSecure123";
+        let messagingInstance = null;
+        let alertStats = {
+            alertsToday: 0,
+            totalAlerts: 0,
+            avgResponseTime: 0,
+            alertClearRate: 0,
+            responseTimes: [],
+            clearedAlerts: 0,
+            totalAlertTime: 0
+        };
+        
+        // DOM Elements
+        const membersTableBody = document.getElementById('members-table-body');
+        const allianceList = document.getElementById('alliance-list');
+        const quickAccessList = document.getElementById('quick-access-list');
+        const searchInput = document.getElementById('search-input');
+        const searchBtn = document.getElementById('search-btn');
+        const filterButtons = document.querySelectorAll('.filter-btn');
+        const sortSelect = document.getElementById('sort-select');
+        const sortOrderBtn = document.getElementById('sort-order');
+        const notificationElement = document.getElementById('notification');
+        const notificationText = document.getElementById('notification-text');
+        const selectionInfo = document.getElementById('selection-info');
+        const selectedCount = document.getElementById('selected-count');
+        const selectedMembersList = document.getElementById('selected-members-list');
+        const sendToSelectedBtn = document.getElementById('send-to-selected-btn');
+        const clearSelectionBtn = document.getElementById('clear-selection');
+        const clearAllAlertsBtn = document.getElementById('clear-all-alerts-btn');
+        const memberPopup = document.getElementById('member-popup');
+        const popupClose = document.getElementById('popup-close');
+        const popupGamerName = document.getElementById('popup-gamer-name');
+        const popupAlliance = document.getElementById('popup-alliance');
+        const popupStatus = document.getElementById('popup-status');
+        const popupJoinDate = document.getElementById('popup-join-date');
+        const popupLastAlert = document.getElementById('popup-last-alert');
+        const popupSendAlert = document.getElementById('popup-send-alert');
+        const popupAddToSelection = document.getElementById('popup-add-to-selection');
+        const popupDeleteMember = document.getElementById('popup-delete-member');
+        const registrationModal = document.getElementById('registration-modal');
+        const openRegistrationBtn = document.getElementById('open-registration');
+        const cancelRegistrationBtn = document.getElementById('cancel-registration');
+        const registrationForm = document.getElementById('registration-form');
+        const gamerNameInput = document.getElementById('gamer-name');
+        const allianceSelect = document.getElementById('alliance-name');
+        const customAllianceGroup = document.getElementById('custom-alliance-group');
+        const customAllianceInput = document.getElementById('custom-alliance');
+        const gamerNameError = document.getElementById('gamer-name-error');
+        const formMessage = document.getElementById('form-message');
+        const notificationStatusContainer = document.getElementById('notification-status-container');
+        const enableNotificationsBtn = document.getElementById('enable-notifications-btn');
+        const adminModal = document.getElementById('admin-modal');
+        const openAdminBtn = document.getElementById('open-admin');
+        const cancelAdminBtn = document.getElementById('cancel-admin');
+        const adminPasswordInput = document.getElementById('admin-password');
+        const submitAdminPasswordBtn = document.getElementById('submit-admin-password');
+        const adminMessage = document.getElementById('admin-message');
+        const adminControlsCard = document.getElementById('admin-controls-card');
+        const resetStatsBtn = document.getElementById('reset-stats-btn');
+        const resetAvgResponseBtn = document.getElementById('reset-avg-response-btn');
+        const deleteGamerBtn = document.getElementById('delete-gamer-btn');
+        const lockAdminBtn = document.getElementById('lock-admin-btn');
+        const adminStatus = document.getElementById('admin-status');
+        const deleteModal = document.getElementById('delete-modal');
+        const deleteMemberInfo = document.getElementById('delete-member-info');
+        const confirmDeleteName = document.getElementById('confirm-delete-name');
+        const cancelDeleteBtn = document.getElementById('cancel-delete');
+        const confirmDeleteBtn = document.getElementById('confirm-delete');
+        const deleteMessage = document.getElementById('delete-message');
+        const testNotificationBtn = document.getElementById('test-notification-btn');
+        const resetNotificationsBtn = document.getElementById('reset-notifications-btn');
+        
+        /**
+         * Initializes the application when DOM is loaded
+         */
+        document.addEventListener('DOMContentLoaded', async function() {
+            loadAlertStats();
+            await initializePushNotifications();
+            loadMembersFromFirestore();
+            setupEventListeners();
+            setupRealTimeListeners();
+            updateNotificationStatus();
+        });
+        
+        /**
+         * Initialize push notifications system
+         */
+        async function initializePushNotifications() {
+            try {
+                // Check if browser supports notifications
+                if (!('Notification' in window)) {
+                    console.log('This browser does not support notifications');
+                    return;
+                }
+                
+                // Initialize Firebase Cloud Messaging
+                const { getMessaging, onMessage, isSupported } = await import(
+                    "https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging.js"
+                );
+                
+                const isMessagingSupported = await isSupported();
+                if (!isMessagingSupported) {
+                    console.log('FCM not supported in this browser');
+                    return;
+                }
+                
+                messagingInstance = getMessaging(app);
+                
+                // Listen for foreground messages
+                onMessage(messagingInstance, (payload) => {
+                    console.log('Message received:', payload);
+                    
+                    if (payload.notification) {
+                        showNotification(
+                            payload.notification.title || 'Battle Alert',
+                            payload.notification.body || 'New alert received'
+                        );
+                        
+                        // Show browser notification
+                        if (Notification.permission === 'granted') {
+                            new Notification(payload.notification.title, {
+                                body: payload.notification.body,
+                                icon: 'https://cdn-icons-png.flaticon.com/512/1077/1077976.png',
+                                badge: 'https://cdn-icons-png.flaticon.com/512/1077/1077976.png'
+                            });
+                        }
+                    }
+                });
+                
+                console.log('Push notifications initialized');
+            } catch (error) {
+                console.error('Error initializing push notifications:', error);
+            }
+        }
+        
+        /**
+         * Requests notification permission and registers FCM token
+         */
+        async function requestNotificationPermission() {
+            try {
+                // First check if already granted
+                if (Notification.permission === 'granted') {
+                    await registerFCMToken();
+                    updateNotificationStatus();
+                    showNotification('Success', 'Notifications are already enabled!');
+                    return;
+                }
+                
+                // Show dialog explaining what will happen
+                const userConsent = confirm(
+                    'Battle Alert needs permission to send you notifications.\n\n' +
+                    '✓ Get instant alerts when alliance members are under attack\n' +
+                    '✓ Receive notifications even when the app is closed\n' +
+                    '✓ Works on both mobile and desktop devices\n\n' +
+                    'Click OK to enable notifications.'
+                );
+                
+                if (!userConsent) {
+                    showNotification('Info', 'Notification request cancelled');
+                    return;
+                }
+                
+                // Request permission
+                const permission = await Notification.requestPermission();
+                
+                if (permission === 'granted') {
+                    showNotification('Success', 'Notifications enabled successfully!');
+                    
+                    // Register FCM token
+                    await registerFCMToken();
+                    
+                    // Update UI
+                    updateNotificationStatus();
+                    
+                    // Show test notification
+                    setTimeout(() => {
+                        new Notification('Battle Alert', {
+                            body: 'Notifications are now enabled! You will receive battle alerts.',
+                            icon: 'https://cdn-icons-png.flaticon.com/512/1077/1077976.png',
+                            badge: 'https://cdn-icons-png.flaticon.com/512/1077/1077976.png',
+                            tag: 'welcome-notification'
+                        });
+                    }, 1000);
+                    
+                } else if (permission === 'denied') {
+                    showNotification('Blocked', 'Notifications were blocked. Enable them in browser settings.');
+                    updateNotificationStatus();
+                } else {
+                    showNotification('Info', 'Notification permission not granted');
+                }
+                
+            } catch (error) {
+                console.error('Error requesting notification permission:', error);
+                showNotification('Error', 'Failed to enable notifications: ' + error.message);
+            }
+        }
+        
+        /**
+         * Registers FCM token for push notifications
+         */
+        async function registerFCMToken() {
+            try {
+                if (!messagingInstance) {
+                    console.log('Messaging not initialized');
+                    return;
+                }
+                
+                const { getToken } = await import(
+                    "https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging.js"
+                );
+                
+                const vapidKey = "BEwiF4gZjQM5OC8-G-NeTUh2Fadlr4f1w0VqRnhALtP-_RfQ4ewBYpscBEzyLSDi94yi5ixi3epQhsfKzd4-ghY";
+                
+                const fcmToken = await getToken(messagingInstance, { vapidKey });
+                
+                if (fcmToken) {
+                    console.log('FCM Token obtained:', fcmToken);
+                    localStorage.setItem('battleAlertFCMToken', fcmToken);
+                    console.log('Cross-device notifications ready');
+                } else {
+                    console.log('No FCM token available');
+                }
+                
+            } catch (error) {
+                console.error('Error getting FCM token:', error);
+            }
+        }
+        
+        /**
+         * Tests notification functionality
+         */
+        function testNotification() {
+            if (Notification.permission !== 'granted') {
+                showNotification('Error', 'Notifications are not enabled. Please enable them first.');
+                return;
+            }
+            
+            // Show in-app notification
+            showNotification('Test Notification', 'This is a test notification from Battle Alert!');
+            
+            // Show browser notification
+            try {
+                new Notification('Battle Alert - Test', {
+                    body: 'Your notifications are working correctly! You will receive alerts when members are under attack.',
+                    icon: 'https://cdn-icons-png.flaticon.com/512/1077/1077976.png',
+                    badge: 'https://cdn-icons-png.flaticon.com/512/1077/1077976.png',
+                    tag: 'test-notification',
+                    requireInteraction: false
+                });
+            } catch (e) {
+                console.error('Browser notification test failed:', e);
+            }
+        }
+        
+        /**
+         * Resets notification settings
+         */
+        function resetNotificationSettings() {
+            const confirmReset = confirm(
+                'Reset Notification Settings?\n\n' +
+                'This will:\n' +
+                '• Clear your notification token\n' +
+                '• Remove stored preferences\n' +
+                '• Reload the page\n\n' +
+                'You will need to enable notifications again.\n\n' +
+                'Continue?'
+            );
+            
+            if (confirmReset) {
+                localStorage.removeItem('battleAlertFCMToken');
+                localStorage.removeItem('battleAlertSeenNotificationRequest');
+                showNotification('Resetting', 'Notification settings cleared. Reloading...');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            }
+        }
+        
+        /**
+         * Updates notification permission status display
+         */
+        function updateNotificationStatus() {
+            if (!notificationStatusContainer) return;
+            
+            const permission = Notification.permission;
+            
+            if (permission === 'granted') {
+                notificationStatusContainer.innerHTML = `
+                    <div class="notification-status-box notification-enabled">
+                        <p><i class="fas fa-check-circle" style="color: #4caf50;"></i> <strong>Notifications Enabled ✓</strong></p>
+                        <p style="font-size: 0.9rem; margin-top: 5px;">You will receive alerts on all your devices</p>
+                    </div>
+                `;
+                if (enableNotificationsBtn) enableNotificationsBtn.style.display = 'none';
+                if (testNotificationBtn) testNotificationBtn.style.display = 'block';
+                if (resetNotificationsBtn) resetNotificationsBtn.style.display = 'block';
+                
+            } else if (permission === 'denied') {
+                notificationStatusContainer.innerHTML = `
+                    <div class="notification-status-box notification-denied">
+                        <p><i class="fas fa-ban" style="color: #f44336;"></i> <strong>Notifications Blocked ✗</strong></p>
+                        <p style="font-size: 0.9rem; margin-top: 5px;">Enable notifications in your browser settings to receive alerts</p>
+                    </div>
+                `;
+                if (enableNotificationsBtn) enableNotificationsBtn.style.display = 'none';
+                if (testNotificationBtn) testNotificationBtn.style.display = 'none';
+                if (resetNotificationsBtn) resetNotificationsBtn.style.display = 'block';
+                
+            } else {
+                notificationStatusContainer.innerHTML = `
+                    <div class="notification-status-box notification-default">
+                        <p><i class="fas fa-bell-slash" style="color: #2196f3;"></i> <strong>Notifications Not Set Up</strong></p>
+                        <p style="font-size: 0.9rem; margin-top: 5px;">Enable notifications to receive instant battle alerts</p>
+                    </div>
+                `;
+                if (enableNotificationsBtn) enableNotificationsBtn.style.display = 'block';
+                if (testNotificationBtn) testNotificationBtn.style.display = 'none';
+                if (resetNotificationsBtn) resetNotificationsBtn.style.display = 'none';
+            }
+        }
