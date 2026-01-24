@@ -79,6 +79,7 @@
             display: flex;
             gap: 15px;
             flex-wrap: wrap;
+            align-items: center;
         }
         
         .register-btn, .send-alert-btn {
@@ -208,7 +209,8 @@
         }
         
         .form-group input,
-        .form-group select {
+        .form-group select,
+        .form-group textarea {
             width: 100%;
             padding: 12px;
             border: 1px solid var(--medium-gray);
@@ -216,6 +218,11 @@
             background-color: var(--light-gray);
             color: var(--black);
             font-size: 1rem;
+        }
+        
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
         }
         
         .form-actions {
@@ -246,6 +253,10 @@
         .form-btn-secondary {
             background-color: var(--medium-gray);
             color: var(--white);
+        }
+        
+        .form-btn-secondary:hover {
+            background-color: #5d5d5d;
         }
         
         .form-btn-danger {
@@ -595,9 +606,57 @@
         .logout-btn:hover {
             background-color: rgba(255, 255, 255, 0.1);
         }
+        
+        /* NEW STYLES FOR QUICK ACTIONS */
+        .quick-action-buttons {
+            display: flex;
+            gap: 5px;
+            margin-top: 5px;
+        }
+        
+        .quick-action-btn {
+            padding: 4px 8px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            transition: all 0.3s;
+        }
+        
+        .quick-attack-btn {
+            background-color: var(--alert-red);
+            color: white;
+        }
+        
+        .quick-attack-btn:hover {
+            background-color: var(--dark-red);
+        }
+        
+        .quick-reinforce-btn {
+            background-color: var(--info-blue);
+            color: white;
+        }
+        
+        .quick-reinforce-btn:hover {
+            background-color: #1976d2;
+        }
+        
+        .gamer-name-cell {
+            cursor: pointer;
+            color: var(--light-red);
+            font-weight: bold;
+        }
+        
+        .gamer-name-cell:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
+    <!-- All existing modals remain exactly the same -->
     <div id="registration-modal" class="modal">
         <div class="modal-content">
             <h2 class="modal-title"><i class="fas fa-user-plus"></i> Register New Gamer</h2>
@@ -680,6 +739,10 @@
                     <select id="specific-gamer">
                     </select>
                 </div>
+                <div class="form-group">
+                    <label for="alert-message">Additional Message (Optional)</label>
+                    <textarea id="alert-message" placeholder="Add any additional details about the alert..."></textarea>
+                </div>
                 <div class="form-actions">
                     <button type="button" class="form-btn form-btn-secondary" id="cancel-alert">Cancel</button>
                     <button type="submit" class="form-btn form-btn-primary">Send Alert</button>
@@ -731,6 +794,32 @@
             <div class="form-actions">
                 <button type="button" class="form-btn form-btn-secondary" id="cancel-vote">Cancel</button>
                 <button type="button" class="form-btn form-btn-danger" id="submit-vote">Submit Vote</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW MODAL: Quick Alert with Notes -->
+    <div id="quick-alert-modal" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-title"><i class="fas fa-bullhorn"></i> Send Quick Alert</h2>
+            <div id="quick-alert-content">
+                <p>Send alert to: <strong id="quick-alert-recipient">[Gamer Name]</strong></p>
+                <div class="form-group">
+                    <label for="quick-alert-type">Alert Type *</label>
+                    <select id="quick-alert-type" required>
+                        <option value="">Select alert type</option>
+                        <option value="attack">Under Attack!</option>
+                        <option value="reinforce">Reinforcements Needed!</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="quick-alert-message">Additional Message (Optional)</label>
+                    <textarea id="quick-alert-message" placeholder="Add any additional details about the alert..."></textarea>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="form-btn form-btn-secondary" id="cancel-quick-alert">Cancel</button>
+                <button type="button" class="form-btn form-btn-primary" id="send-quick-alert">Send Alert</button>
             </div>
         </div>
     </div>
@@ -841,6 +930,7 @@
                             <th data-sort="status">Status <i class="fas fa-sort"></i></th>
                             <th data-sort="alerts">Alerts <i class="fas fa-sort"></i></th>
                             <th data-sort="response">Avg Response <i class="fas fa-sort"></i></th>
+                            <th>Quick Actions</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -897,7 +987,9 @@
         let allGamers = [];
         let currentAlert = null;
         let currentVoteGamer = null;
+        let quickAlertGamer = null;
 
+        // Get all existing modal elements
         const registrationModal = document.getElementById('registration-modal');
         const openRegistrationBtn = document.getElementById('open-registration');
         const cancelRegistrationBtn = document.getElementById('cancel-registration');
@@ -918,6 +1010,7 @@
         const specificGamerGroup = document.getElementById('specific-gamer-group');
         const recipientSelect = document.getElementById('alert-recipient');
         const alertTypeSelect = document.getElementById('alert-type');
+        const alertMessageInput = document.getElementById('alert-message');
         
         const activeAlertModal = document.getElementById('active-alert-modal');
         const gotItBtn = document.getElementById('got-it-btn');
@@ -953,6 +1046,14 @@
         const responseRateElement = document.getElementById('response-rate');
         
         const alertLogContainer = document.getElementById('alert-log-container');
+        
+        // NEW ELEMENTS for quick alerts
+        const quickAlertModal = document.getElementById('quick-alert-modal');
+        const quickAlertRecipient = document.getElementById('quick-alert-recipient');
+        const quickAlertType = document.getElementById('quick-alert-type');
+        const quickAlertMessage = document.getElementById('quick-alert-message');
+        const cancelQuickAlertBtn = document.getElementById('cancel-quick-alert');
+        const sendQuickAlertBtn = document.getElementById('send-quick-alert');
 
         document.addEventListener('DOMContentLoaded', async function() {
             const savedUserId = localStorage.getItem('battleAlertUserId');
@@ -1002,6 +1103,8 @@
                 }
             } catch (error) {
                 console.error('Error loading current user:', error);
+                // Clear invalid user ID
+                localStorage.removeItem('battleAlertUserId');
             }
         }
 
@@ -1066,7 +1169,7 @@
                 const isCurrentUser = currentUser && gamer.id === currentUser.id;
                 
                 row.innerHTML = `
-                    <td>
+                    <td class="gamer-name-cell" data-id="${gamer.id}" data-name="${gamer.gamerName}">
                         ${gamer.gamerName}
                         ${isCurrentUser ? ' <i class="fas fa-user" style="color: var(--info-blue);" title="This is you"></i>' : ''}
                     </td>
@@ -1078,14 +1181,26 @@
                     <td>${totalAlerts}</td>
                     <td>${avgResponseTime}</td>
                     <td>
+                        ${currentUser && !isCurrentUser ? `
+                            <div class="quick-action-buttons">
+                                <button class="quick-action-btn quick-attack-btn" data-id="${gamer.id}" data-name="${gamer.gamerName}">
+                                    <i class="fas fa-crosshairs"></i> Attack
+                                </button>
+                                <button class="quick-action-btn quick-reinforce-btn" data-id="${gamer.id}" data-name="${gamer.gamerName}">
+                                    <i class="fas fa-shield-alt"></i> Reinforce
+                                </button>
+                            </div>
+                        ` : '-'}
+                    </td>
+                    <td>
                         <div class="action-buttons">
                             ${isCurrentUser ? `
                                 <button class="action-btn edit-btn" data-id="${gamer.id}">
                                     <i class="fas fa-edit"></i> Edit Profile
                                 </button>
                             ` : ''}
-                            ${currentUser ? `
-                                <button class="action-btn alert-btn-small" data-id="${gamer.id}">
+                            ${currentUser && !isCurrentUser ? `
+                                <button class="action-btn alert-btn-small" data-id="${gamer.id}" data-name="${gamer.gamerName}">
                                     <i class="fas fa-bullhorn"></i> Alert
                                 </button>
                                 <button class="action-btn vote-btn" data-id="${gamer.id}" data-name="${gamer.gamerName}">
@@ -1099,6 +1214,35 @@
                 gamersTableBody.appendChild(row);
             });
             
+            // Add click event to gamer names
+            document.querySelectorAll('.gamer-name-cell').forEach(cell => {
+                cell.addEventListener('click', (e) => {
+                    const gamerId = e.currentTarget.getAttribute('data-id');
+                    const gamerName = e.currentTarget.getAttribute('data-name');
+                    openQuickAlertModal(gamerId, gamerName);
+                });
+            });
+            
+            // Add click events to quick action buttons
+            document.querySelectorAll('.quick-attack-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const gamerId = e.currentTarget.getAttribute('data-id');
+                    const gamerName = e.currentTarget.getAttribute('data-name');
+                    sendQuickAlert(gamerId, gamerName, 'attack');
+                });
+            });
+            
+            document.querySelectorAll('.quick-reinforce-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const gamerId = e.currentTarget.getAttribute('data-id');
+                    const gamerName = e.currentTarget.getAttribute('data-name');
+                    sendQuickAlert(gamerId, gamerName, 'reinforce');
+                });
+            });
+            
+            // Add click events to existing action buttons
             if (currentUser) {
                 document.querySelectorAll('.edit-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
@@ -1110,7 +1254,8 @@
                 document.querySelectorAll('.alert-btn-small').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         const gamerId = e.currentTarget.getAttribute('data-id');
-                        openSendAlertToSpecific(gamerId);
+                        const gamerName = e.currentTarget.getAttribute('data-name');
+                        openQuickAlertModal(gamerId, gamerName);
                     });
                 });
                 
@@ -1121,6 +1266,81 @@
                         openVoteRemoveModal(gamerId, gamerName);
                     });
                 });
+            }
+        }
+
+        // NEW FUNCTION: Open quick alert modal
+        function openQuickAlertModal(gamerId, gamerName) {
+            if (!currentUser) {
+                showNotification('Error', 'Please register first');
+                openRegistrationBtn.click();
+                return;
+            }
+            
+            if (currentUser.id === gamerId) {
+                showNotification('Error', 'You cannot send an alert to yourself');
+                return;
+            }
+            
+            quickAlertGamer = { id: gamerId, name: gamerName };
+            quickAlertRecipient.textContent = gamerName;
+            quickAlertType.value = '';
+            quickAlertMessage.value = '';
+            quickAlertModal.style.display = 'flex';
+        }
+
+        // NEW FUNCTION: Send quick alert
+        async function sendQuickAlert(gamerId, gamerName, alertType = null) {
+            if (!currentUser) {
+                showNotification('Error', 'Please register first');
+                openRegistrationBtn.click();
+                return;
+            }
+            
+            if (currentUser.id === gamerId) {
+                showNotification('Error', 'You cannot send an alert to yourself');
+                return;
+            }
+            
+            const finalAlertType = alertType || quickAlertType.value;
+            const message = quickAlertMessage.value.trim();
+            
+            if (!finalAlertType) {
+                showNotification('Error', 'Please select an alert type');
+                return;
+            }
+            
+            try {
+                const alertMessage = finalAlertType === 'attack' 
+                    ? 'You are Under Attack!' + (message ? ` - ${message}` : '')
+                    : 'Reinforcements Needed!' + (message ? ` - ${message}` : '');
+                
+                await addDoc(collection(db, 'alerts'), {
+                    type: finalAlertType,
+                    message: alertMessage,
+                    senderId: currentUser.id,
+                    senderName: currentUser.gamerName,
+                    recipientId: gamerId,
+                    recipientName: gamerName,
+                    createdAt: serverTimestamp(),
+                    respondedAt: null,
+                    alliance: currentUser.alliance
+                });
+
+                const recipientRef = doc(db, 'members', gamerId);
+                await updateDoc(recipientRef, {
+                    status: 'under_attack',
+                    lastAlert: serverTimestamp()
+                });
+
+                showNotification('Success', `Alert sent to ${gamerName}!`);
+                
+                // Close modal if it's open
+                quickAlertModal.style.display = 'none';
+                
+            } catch (error) {
+                console.error('Error sending quick alert:', error);
+                showNotification('Error', 'Failed to send alert');
             }
         }
 
@@ -1175,6 +1395,11 @@
                     <span style="color: var(--medium-gray);">alerted</span>
                     <span class="alert-log-recipient">${alert.recipientName}</span>
                     <span class="alert-log-time">${timeAgo}</span>
+                    ${alert.message && alert.message.includes('-') ? `
+                        <div style="font-size: 0.8rem; color: var(--medium-gray); margin-top: 5px;">
+                            <i class="fas fa-comment"></i> ${alert.message.split('-')[1].trim()}
+                        </div>
+                    ` : ''}
                 `;
                 
                 alertLogContainer.appendChild(logItem);
@@ -1285,22 +1510,6 @@
             }
             
             editProfileModal.style.display = 'flex';
-        }
-
-        function openSendAlertToSpecific(gamerId) {
-            if (!currentUser) {
-                showNotification('Error', 'Please register first');
-                openRegistrationBtn.click();
-                return;
-            }
-            
-            const specificGamerSelect = document.getElementById('specific-gamer');
-            specificGamerSelect.value = gamerId;
-            
-            recipientSelect.value = 'specific';
-            specificGamerGroup.style.display = 'block';
-            
-            sendAlertModal.style.display = 'flex';
         }
 
         function openVoteRemoveModal(gamerId, gamerName) {
@@ -1697,7 +1906,8 @@
                         const gamerRef = doc(db, 'members', currentUser.id);
                         await updateDoc(gamerRef, {
                             totalAlerts: totalAlerts,
-                            totalResponseTime: totalResponseTime
+                            totalResponseTime: totalResponseTime,
+                            status: 'safe'
                         });
                     }
                 }
@@ -1711,6 +1921,7 @@
         }
 
         function setupEventListeners() {
+            // Existing event listeners remain the same
             openRegistrationBtn.addEventListener('click', () => {
                 registrationModal.style.display = 'flex';
             });
@@ -1893,6 +2104,7 @@
                 const alertType = document.getElementById('alert-type').value;
                 const recipientType = document.getElementById('alert-recipient').value;
                 const specificGamerId = document.getElementById('specific-gamer').value;
+                const message = document.getElementById('alert-message').value.trim();
 
                 if (!alertType || !recipientType) {
                     showNotification('Error', 'Please fill in all required fields');
@@ -1916,9 +2128,13 @@
                     }
 
                     for (const recipient of recipients) {
+                        const alertMessage = alertType === 'attack' 
+                            ? 'You are Under Attack!' + (message ? ` - ${message}` : '')
+                            : 'Reinforcements Needed!' + (message ? ` - ${message}` : '');
+                        
                         await addDoc(collection(db, 'alerts'), {
                             type: alertType,
-                            message: alertType === 'attack' ? 'You are Under Attack!' : 'Reinforcements Needed!',
+                            message: alertMessage,
                             senderId: currentUser.id,
                             senderName: currentUser.gamerName,
                             recipientId: recipient.id,
@@ -1955,13 +2171,6 @@
                 if (currentAlert) {
                     await markAlertAsResponded(currentAlert.id);
                     activeAlertModal.style.display = 'none';
-                    
-                    if (currentUser) {
-                        const userRef = doc(db, 'members', currentUser.id);
-                        await updateDoc(userRef, {
-                            status: 'safe'
-                        });
-                    }
                 }
             });
 
@@ -2044,6 +2253,24 @@
 
             enableNotificationsBtn.addEventListener('click', requestNotificationPermission);
             testNotificationBtn.addEventListener('click', testNotification);
+            
+            // NEW EVENT LISTENERS for quick alert modal
+            cancelQuickAlertBtn.addEventListener('click', () => {
+                quickAlertModal.style.display = 'none';
+                quickAlertGamer = null;
+            });
+
+            quickAlertModal.addEventListener('click', (e) => {
+                if (e.target === quickAlertModal) {
+                    quickAlertModal.style.display = 'none';
+                    quickAlertGamer = null;
+                }
+            });
+
+            sendQuickAlertBtn.addEventListener('click', async () => {
+                if (!quickAlertGamer) return;
+                await sendQuickAlert(quickAlertGamer.id, quickAlertGamer.name);
+            });
         }
     </script>
 </body>
