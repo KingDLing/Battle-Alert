@@ -82,7 +82,7 @@
             align-items: center;
         }
         
-        .register-btn, .send-alert-btn {
+        .register-btn, .send-alert-btn, .login-btn {
             padding: 10px 20px;
             border: none;
             border-radius: 4px;
@@ -110,6 +110,15 @@
         
         .send-alert-btn:hover {
             background-color: var(--dark-red);
+        }
+        
+        .login-btn {
+            background-color: var(--info-blue);
+            color: var(--white);
+        }
+        
+        .login-btn:hover {
+            background-color: #1976d2;
         }
         
         .card {
@@ -664,19 +673,20 @@
         .quick-action-buttons {
             display: flex;
             gap: 5px;
-            margin-top: 5px;
+            flex-wrap: wrap;
         }
         
         .quick-action-btn {
-            padding: 4px 8px;
+            padding: 6px 10px;
             border: none;
-            border-radius: 3px;
+            border-radius: 4px;
             cursor: pointer;
             font-size: 0.8rem;
             display: flex;
             align-items: center;
-            gap: 3px;
+            gap: 5px;
             transition: all 0.3s;
+            white-space: nowrap;
         }
         
         .quick-attack-btn {
@@ -727,7 +737,6 @@
         .clear-alerts-btn {
             background-color: var(--medium-gray);
             color: white;
-            margin-top: 10px;
         }
         
         .clear-alerts-btn:hover {
@@ -747,9 +756,91 @@
         .logout-btn:hover {
             background-color: rgba(255, 255, 255, 0.1);
         }
+        
+        /* LOGIN FORM STYLES */
+        .login-form-container {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .login-instructions {
+            background-color: rgba(33, 150, 243, 0.1);
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--info-blue);
+        }
+        
+        .gamer-list {
+            margin-top: 15px;
+        }
+        
+        .gamer-list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            margin-bottom: 5px;
+        }
+        
+        .login-as-btn {
+            padding: 5px 10px;
+            background-color: var(--success-green);
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        
+        .login-as-btn:hover {
+            background-color: #388e3c;
+        }
     </style>
 </head>
 <body>
+    <!-- LOGIN MODAL -->
+    <div id="login-modal" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-title"><i class="fas fa-sign-in-alt"></i> Login to Battle Alert</h2>
+            <div class="login-form-container">
+                <div class="login-instructions">
+                    <p><i class="fas fa-info-circle"></i> Login with your existing gamer name or register as a new user.</p>
+                </div>
+                
+                <div class="form-group">
+                    <label for="login-gamer-name">Gamer Name</label>
+                    <input type="text" id="login-gamer-name" placeholder="Enter your gamer name">
+                    <div id="login-error" style="color: var(--alert-red); font-size: 0.9rem; margin-top: 5px; display: none;">
+                        Gamer not found. Please check your name or register as a new user.
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="form-btn form-btn-secondary" id="cancel-login">Cancel</button>
+                    <button type="button" class="form-btn form-btn-primary" id="submit-login">Login</button>
+                </div>
+                
+                <div style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--medium-gray);">
+                    <p style="color: var(--medium-gray); margin-bottom: 10px;">Don't have an account?</p>
+                    <button type="button" class="form-btn form-btn-secondary" id="switch-to-register">
+                        <i class="fas fa-user-plus"></i> Register New Gamer
+                    </button>
+                </div>
+                
+                <div class="gamer-list" id="recent-gamers-list" style="display: none;">
+                    <h4 style="margin-bottom: 10px; color: var(--white);">Recent Gamers:</h4>
+                    <div id="gamers-list-container">
+                        <!-- Recent gamers will be listed here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- REGISTRATION MODAL -->
     <div id="registration-modal" class="modal">
         <div class="modal-content">
@@ -853,6 +944,32 @@
         </div>
     </div>
 
+    <!-- QUICK ALERT MODAL -->
+    <div id="quick-alert-modal" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-title"><i class="fas fa-bullhorn"></i> Send Quick Alert</h2>
+            <div id="quick-alert-content">
+                <p>Send alert to: <strong id="quick-alert-recipient">[Gamer Name]</strong></p>
+                <div class="form-group">
+                    <label for="quick-alert-type">Alert Type *</label>
+                    <select id="quick-alert-type" required>
+                        <option value="">Select alert type</option>
+                        <option value="attack">Under Attack!</option>
+                        <option value="reinforce">Reinforcements Needed!</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="quick-alert-message">Additional Message (Optional)</label>
+                    <textarea id="quick-alert-message" placeholder="Add any additional details about the alert..."></textarea>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="form-btn form-btn-secondary" id="cancel-quick-alert">Cancel</button>
+                <button type="button" class="form-btn form-btn-primary" id="send-quick-alert">Send Alert</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ACTIVE ALERT MODAL -->
     <div id="active-alert-modal" class="modal">
         <div class="modal-content">
@@ -902,78 +1019,6 @@
         </div>
     </div>
 
-    <!-- QUICK ALERT MODAL -->
-    <div id="quick-alert-modal" class="modal">
-        <div class="modal-content">
-            <h2 class="modal-title"><i class="fas fa-bullhorn"></i> Send Quick Alert</h2>
-            <div id="quick-alert-content">
-                <p>Send alert to: <strong id="quick-alert-recipient">[Gamer Name]</strong></p>
-                <div class="form-group">
-                    <label for="quick-alert-type">Alert Type *</label>
-                    <select id="quick-alert-type" required>
-                        <option value="">Select alert type</option>
-                        <option value="attack">Under Attack!</option>
-                        <option value="reinforce">Reinforcements Needed!</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="quick-alert-message">Additional Message (Optional)</label>
-                    <textarea id="quick-alert-message" placeholder="Add any additional details about the alert..."></textarea>
-                </div>
-            </div>
-            <div class="form-actions">
-                <button type="button" class="form-btn form-btn-secondary" id="cancel-quick-alert">Cancel</button>
-                <button type="button" class="form-btn form-btn-primary" id="send-quick-alert">Send Alert</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- CLEAR ALERTS MODAL -->
-    <div id="clear-alerts-modal" class="modal">
-        <div class="modal-content">
-            <h2 class="modal-title"><i class="fas fa-trash-alt"></i> Clear All Alerts</h2>
-            <div id="clear-alerts-content">
-                <p>Are you sure you want to clear all alert logs?</p>
-                <p style="color: var(--medium-gray); font-size: 0.9rem; margin-top: 10px;">
-                    This will remove all alert history but will NOT affect gamer statistics.
-                </p>
-                <div class="form-group" style="margin-top: 20px;">
-                    <label>
-                        <input type="checkbox" id="confirm-clear">
-                        I understand this action cannot be undone
-                    </label>
-                </div>
-            </div>
-            <div class="form-actions">
-                <button type="button" class="form-btn form-btn-secondary" id="cancel-clear-alerts">Cancel</button>
-                <button type="button" class="form-btn form-btn-danger" id="confirm-clear-alerts" disabled>Clear All Alerts</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- RESET STATS MODAL -->
-    <div id="reset-stats-modal" class="modal">
-        <div class="modal-content">
-            <h2 class="modal-title"><i class="fas fa-chart-line"></i> Reset Statistics</h2>
-            <div id="reset-stats-content">
-                <p>Are you sure you want to reset all statistics?</p>
-                <p style="color: var(--medium-gray); font-size: 0.9rem; margin-top: 10px;">
-                    This will reset today's alerts, total alerts, and response times to zero.
-                </p>
-                <div class="form-group" style="margin-top: 20px;">
-                    <label>
-                        <input type="checkbox" id="confirm-reset">
-                        I understand this action cannot be undone
-                    </label>
-                </div>
-            </div>
-            <div class="form-actions">
-                <button type="button" class="form-btn form-btn-secondary" id="cancel-reset-stats">Cancel</button>
-                <button type="button" class="form-btn form-btn-danger" id="confirm-reset-stats" disabled>Reset Statistics</button>
-            </div>
-        </div>
-    </div>
-
     <!-- MAIN APP -->
     <div class="container">
         <header>
@@ -1001,17 +1046,17 @@
                             <div class="dropdown-item" id="edit-profile-header-btn">
                                 <i class="fas fa-edit"></i> Edit Profile
                             </div>
-                            <div class="dropdown-item" id="clear-my-alerts-btn">
-                                <i class="fas fa-bell-slash"></i> Clear My Alerts
-                            </div>
                             <div class="dropdown-item danger" id="logout-header-btn">
                                 <i class="fas fa-sign-out-alt"></i> Logout
                             </div>
                         </div>
                     </div>
                 </div>
-                <button class="send-alert-btn" id="open-send-alert">
+                <button class="send-alert-btn" id="open-send-alert" style="display: none;">
                     <i class="fas fa-bullhorn"></i> Send Alert
+                </button>
+                <button class="login-btn" id="open-login">
+                    <i class="fas fa-sign-in-alt"></i> Login
                 </button>
                 <button class="register-btn" id="open-registration">
                     <i class="fas fa-user-plus"></i> Register
@@ -1019,112 +1064,108 @@
             </div>
         </header>
 
-        <div class="stats-container">
-            <div class="stat-card">
-                <div class="stat-title">TODAY'S ALERTS</div>
-                <div class="stat-value" id="today-alerts">0</div>
-                <div class="stat-subtext" id="today-response-time">Avg Response: N/A</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-title">TOTAL ALERTS</div>
-                <div class="stat-value" id="total-alerts">0</div>
-                <div class="stat-subtext" id="total-response-time">Avg Response: N/A</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-title">ACTIVE GAMERS</div>
-                <div class="stat-value" id="active-gamers">0</div>
-                <div class="stat-subtext">Registered in system</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-title">RESPONSE RATE</div>
-                <div class="stat-value" id="response-rate">0%</div>
-                <div class="stat-subtext">Alerts responded to</div>
-            </div>
-        </div>
-
-        <!-- ADMIN CONTROLS -->
-        <div class="card" id="admin-controls-card" style="display: none;">
-            <h2 class="card-title"><i class="fas fa-user-shield"></i> Admin Controls</h2>
-            <div class="admin-controls">
-                <h4><i class="fas fa-cogs"></i> System Management</h4>
-                <div class="action-buttons">
-                    <button class="action-btn clear-alerts-btn" id="clear-all-alerts-btn">
-                        <i class="fas fa-trash-alt"></i> Clear All Alert Logs
+        <!-- GUEST WELCOME MESSAGE -->
+        <div id="guest-welcome" class="card" style="display: none;">
+            <h2 class="card-title"><i class="fas fa-gamepad"></i> Welcome to Battle Alert!</h2>
+            <div style="text-align: center; padding: 30px;">
+                <div style="font-size: 4rem; color: var(--primary-red); margin-bottom: 20px;">
+                    <i class="fas fa-bell"></i>
+                </div>
+                <h3 style="color: var(--white); margin-bottom: 15px;">Ready to Coordinate with Your Team?</h3>
+                <p style="color: var(--medium-gray); margin-bottom: 25px; max-width: 600px; margin-left: auto; margin-right: auto;">
+                    Battle Alert helps gamers coordinate in real-time. Send alerts, request reinforcements, 
+                    and stay connected with your alliance.
+                </p>
+                <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                    <button class="form-btn form-btn-primary" id="login-from-welcome">
+                        <i class="fas fa-sign-in-alt"></i> Login to Continue
                     </button>
-                    <button class="action-btn vote-btn" id="reset-stats-btn">
-                        <i class="fas fa-chart-line"></i> Reset Statistics
+                    <button class="form-btn form-btn-secondary" id="register-from-welcome">
+                        <i class="fas fa-user-plus"></i> Register New Account
                     </button>
                 </div>
             </div>
         </div>
 
-        <div class="card">
-            <h2 class="card-title"><i class="fas fa-history"></i> Recent Alert Log</h2>
-            <div class="alert-log-container" id="alert-log-container">
-                <div style="text-align: center; padding: 20px; color: var(--medium-gray);">
-                    No alerts sent yet
+        <!-- USER CONTENT (HIDDEN WHEN NOT LOGGED IN) -->
+        <div id="user-content" style="display: none;">
+            <div class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-title">TODAY'S ALERTS</div>
+                    <div class="stat-value" id="today-alerts">0</div>
+                    <div class="stat-subtext" id="today-response-time">Avg Response: N/A</div>
                 </div>
-            </div>
-        </div>
-
-        <div class="card">
-            <h2 class="card-title"><i class="fas fa-bell"></i> Notification Settings</h2>
-            <div id="notification-status-container"></div>
-            <button class="alert-btn alert-btn-primary" id="enable-notifications-btn">
-                <i class="fas fa-bell"></i> Enable Browser Notifications
-            </button>
-            <button class="alert-btn alert-btn-primary" id="test-notification-btn" style="display: none; margin-top: 10px;">
-                <i class="fas fa-check"></i> Test Notification
-            </button>
-            <div style="margin-top: 15px; font-size: 0.9rem; color: var(--medium-gray);">
-                <p><i class="fas fa-info-circle"></i> Get alerts on all devices when help is needed</p>
-            </div>
-        </div>
-
-        <div class="card">
-            <h2 class="card-title"><i class="fas fa-users"></i> Registered Gamers</h2>
-            
-            <div class="search-filter-container">
-                <div class="search-box">
-                    <input type="text" id="search-gamers" placeholder="Search by gamer name or alliance...">
+                <div class="stat-card">
+                    <div class="stat-title">TOTAL ALERTS</div>
+                    <div class="stat-value" id="total-alerts">0</div>
+                    <div class="stat-subtext" id="total-response-time">Avg Response: N/A</div>
                 </div>
-                <div class="filter-box">
-                    <select id="filter-alliance">
-                        <option value="">All Alliances</option>
-                        <option value="FTroop">FTroop</option>
-                    </select>
+                <div class="stat-card">
+                    <div class="stat-title">ACTIVE GAMERS</div>
+                    <div class="stat-value" id="active-gamers">0</div>
+                    <div class="stat-subtext">Registered in system</div>
                 </div>
-                <div class="filter-box">
-                    <select id="sort-gamers">
-                        <option value="name-asc">Sort by: Name (A-Z)</option>
-                        <option value="name-desc">Sort by: Name (Z-A)</option>
-                        <option value="alliance-asc">Sort by: Alliance (A-Z)</option>
-                        <option value="alliance-desc">Sort by: Alliance (Z-A)</option>
-                        <option value="alerts-asc">Sort by: Alerts (Low-High)</option>
-                        <option value="alerts-desc">Sort by: Alerts (High-Low)</option>
-                    </select>
+                <div class="stat-card">
+                    <div class="stat-title">RESPONSE RATE</div>
+                    <div class="stat-value" id="response-rate">0%</div>
+                    <div class="stat-subtext">Alerts responded to</div>
                 </div>
             </div>
 
-            <div class="gamers-table-container">
-                <table class="gamers-table" id="gamers-table">
-                    <thead>
-                        <tr>
-                            <th data-sort="name">Gamer Name <i class="fas fa-sort"></i></th>
-                            <th data-sort="alliance">Alliance <i class="fas fa-sort"></i></th>
-                            <th data-sort="status">Status <i class="fas fa-sort"></i></th>
-                            <th data-sort="alerts">Alerts <i class="fas fa-sort"></i></th>
-                            <th data-sort="response">Avg Response <i class="fas fa-sort"></i></th>
-                            <th>Quick Actions</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="gamers-table-body">
-                    </tbody>
-                </table>
+            <div class="card">
+                <h2 class="card-title"><i class="fas fa-history"></i> Recent Alert Log</h2>
+                <div class="alert-log-container" id="alert-log-container">
+                    <div style="text-align: center; padding: 20px; color: var(--medium-gray);">
+                        No alerts sent yet
+                    </div>
+                </div>
             </div>
-            <div style="text-align: center; margin-top: 20px; color: var(--medium-gray);">
-                <p id="no-gamers-message" style="display: none;">No gamers registered yet. Click "Register" to add the first gamer.</p>
+
+            <div class="card">
+                <h2 class="card-title"><i class="fas fa-users"></i> Registered Gamers</h2>
+                
+                <div class="search-filter-container">
+                    <div class="search-box">
+                        <input type="text" id="search-gamers" placeholder="Search by gamer name or alliance...">
+                    </div>
+                    <div class="filter-box">
+                        <select id="filter-alliance">
+                            <option value="">All Alliances</option>
+                            <option value="FTroop">FTroop</option>
+                        </select>
+                    </div>
+                    <div class="filter-box">
+                        <select id="sort-gamers">
+                            <option value="name-asc">Sort by: Name (A-Z)</option>
+                            <option value="name-desc">Sort by: Name (Z-A)</option>
+                            <option value="alliance-asc">Sort by: Alliance (A-Z)</option>
+                            <option value="alliance-desc">Sort by: Alliance (Z-A)</option>
+                            <option value="alerts-asc">Sort by: Alerts (Low-High)</option>
+                            <option value="alerts-desc">Sort by: Alerts (High-Low)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="gamers-table-container">
+                    <table class="gamers-table" id="gamers-table">
+                        <thead>
+                            <tr>
+                                <th data-sort="name">Gamer Name <i class="fas fa-sort"></i></th>
+                                <th data-sort="alliance">Alliance <i class="fas fa-sort"></i></th>
+                                <th data-sort="status">Status <i class="fas fa-sort"></i></th>
+                                <th data-sort="alerts">Alerts <i class="fas fa-sort"></i></th>
+                                <th data-sort="response">Avg Response <i class="fas fa-sort"></i></th>
+                                <th>Quick Actions</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="gamers-table-body">
+                        </tbody>
+                    </table>
+                </div>
+                <div style="text-align: center; margin-top: 20px; color: var(--medium-gray);">
+                    <p id="no-gamers-message" style="display: none;">No gamers registered yet.</p>
+                </div>
             </div>
         </div>
 
@@ -1177,6 +1218,16 @@
         let quickAlertGamer = null;
 
         // MODAL ELEMENTS
+        const loginModal = document.getElementById('login-modal');
+        const openLoginBtn = document.getElementById('open-login');
+        const cancelLoginBtn = document.getElementById('cancel-login');
+        const submitLoginBtn = document.getElementById('submit-login');
+        const loginGamerNameInput = document.getElementById('login-gamer-name');
+        const loginError = document.getElementById('login-error');
+        const switchToRegisterBtn = document.getElementById('switch-to-register');
+        const recentGamersList = document.getElementById('recent-gamers-list');
+        const gamersListContainer = document.getElementById('gamers-list-container');
+        
         const registrationModal = document.getElementById('registration-modal');
         const openRegistrationBtn = document.getElementById('open-registration');
         const cancelRegistrationBtn = document.getElementById('cancel-registration');
@@ -1201,6 +1252,13 @@
         const alertTypeSelect = document.getElementById('alert-type');
         const alertMessageInput = document.getElementById('alert-message');
         
+        const quickAlertModal = document.getElementById('quick-alert-modal');
+        const quickAlertRecipient = document.getElementById('quick-alert-recipient');
+        const quickAlertType = document.getElementById('quick-alert-type');
+        const quickAlertMessage = document.getElementById('quick-alert-message');
+        const cancelQuickAlertBtn = document.getElementById('cancel-quick-alert');
+        const sendQuickAlertBtn = document.getElementById('send-quick-alert');
+        
         const activeAlertModal = document.getElementById('active-alert-modal');
         const gotItBtn = document.getElementById('got-it-btn');
         
@@ -1212,44 +1270,22 @@
         const currentVotesContainer = document.getElementById('current-votes-container');
         const votesList = document.getElementById('votes-list');
         
-        const quickAlertModal = document.getElementById('quick-alert-modal');
-        const quickAlertRecipient = document.getElementById('quick-alert-recipient');
-        const quickAlertType = document.getElementById('quick-alert-type');
-        const quickAlertMessage = document.getElementById('quick-alert-message');
-        const cancelQuickAlertBtn = document.getElementById('cancel-quick-alert');
-        const sendQuickAlertBtn = document.getElementById('send-quick-alert');
-        
-        const clearAlertsModal = document.getElementById('clear-alerts-modal');
-        const cancelClearAlertsBtn = document.getElementById('cancel-clear-alerts');
-        const confirmClearAlertsBtn = document.getElementById('confirm-clear-alerts');
-        const confirmClearCheckbox = document.getElementById('confirm-clear');
-        
-        const resetStatsModal = document.getElementById('reset-stats-modal');
-        const cancelResetStatsBtn = document.getElementById('cancel-reset-stats');
-        const confirmResetStatsBtn = document.getElementById('confirm-reset-stats');
-        const confirmResetCheckbox = document.getElementById('confirm-reset');
-        
         // UI ELEMENTS
-        const notificationStatusContainer = document.getElementById('notification-status-container');
-        const enableNotificationsBtn = document.getElementById('enable-notifications-btn');
-        const testNotificationBtn = document.getElementById('test-notification-btn');
+        const guestWelcome = document.getElementById('guest-welcome');
+        const userContent = document.getElementById('user-content');
         const notificationElement = document.getElementById('notification');
         const notificationText = document.getElementById('notification-text');
         const currentUserDisplay = document.getElementById('current-user-display');
         const currentUsername = document.getElementById('current-username');
+        const loginFromWelcomeBtn = document.getElementById('login-from-welcome');
+        const registerFromWelcomeBtn = document.getElementById('register-from-welcome');
         
         // PROFILE DROPDOWN
         const profileBtn = document.getElementById('profile-btn');
         const profileDropdownMenu = document.getElementById('profile-dropdown-menu');
         const viewProfileBtn = document.getElementById('view-profile-btn');
         const editProfileHeaderBtn = document.getElementById('edit-profile-header-btn');
-        const clearMyAlertsBtn = document.getElementById('clear-my-alerts-btn');
         const logoutHeaderBtn = document.getElementById('logout-header-btn');
-        
-        // ADMIN CONTROLS
-        const adminControlsCard = document.getElementById('admin-controls-card');
-        const clearAllAlertsBtn = document.getElementById('clear-all-alerts-btn');
-        const resetStatsBtn = document.getElementById('reset-stats-btn');
         
         // TABLE ELEMENTS
         const searchGamersInput = document.getElementById('search-gamers');
@@ -1270,9 +1306,33 @@
 
         // INITIALIZE APP
         document.addEventListener('DOMContentLoaded', async function() {
-            const savedUserId = localStorage.getItem('battleAlertUserId');
-            if (savedUserId) {
-                await loadCurrentUser(savedUserId);
+            // Check for saved user first
+            const savedUser = localStorage.getItem('battleAlertCurrentUser');
+            if (savedUser) {
+                try {
+                    const userData = JSON.parse(savedUser);
+                    // Verify the user still exists in Firebase
+                    const userDoc = await getDocs(query(collection(db, 'members'), where('gamerName', '==', userData.gamerName)));
+                    if (!userDoc.empty) {
+                        const docSnapshot = userDoc.docs[0];
+                        currentUser = {
+                            id: docSnapshot.id,
+                            ...docSnapshot.data()
+                        };
+                        showUserInterface();
+                        showNotification('Welcome Back', `Welcome back, ${currentUser.gamerName}!`);
+                    } else {
+                        // User no longer exists, clear saved data
+                        localStorage.removeItem('battleAlertCurrentUser');
+                        showGuestInterface();
+                    }
+                } catch (error) {
+                    console.error('Error loading saved user:', error);
+                    localStorage.removeItem('battleAlertCurrentUser');
+                    showGuestInterface();
+                }
+            } else {
+                showGuestInterface();
             }
             
             await initializePushNotifications();
@@ -1283,8 +1343,32 @@
             
             checkForActiveAlerts();
             setupRealtimeUpdates();
-            updateAdminControls();
         });
+
+        // SHOW/HIDE INTERFACE
+        function showGuestInterface() {
+            guestWelcome.style.display = 'block';
+            userContent.style.display = 'none';
+            currentUserDisplay.style.display = 'none';
+            openLoginBtn.style.display = 'flex';
+            openRegistrationBtn.style.display = 'flex';
+            openSendAlertBtn.style.display = 'none';
+        }
+
+        function showUserInterface() {
+            guestWelcome.style.display = 'none';
+            userContent.style.display = 'block';
+            currentUserDisplay.style.display = 'flex';
+            openLoginBtn.style.display = 'none';
+            openRegistrationBtn.style.display = 'none';
+            openSendAlertBtn.style.display = 'flex';
+            
+            if (currentUser) {
+                currentUsername.textContent = currentUser.gamerName;
+                // Load gamers again to update the table with current user logged in
+                loadGamers();
+            }
+        }
 
         // REALTIME UPDATES
         function setupRealtimeUpdates() {
@@ -1304,45 +1388,6 @@
             onSnapshot(votesRef, (snapshot) => {
                 checkVoteRemovals();
             });
-        }
-
-        // LOAD CURRENT USER
-        async function loadCurrentUser(userId) {
-            try {
-                const userDoc = await getDocs(query(collection(db, 'members'), where('__name__', '==', userId)));
-                if (!userDoc.empty) {
-                    const docSnapshot = userDoc.docs[0];
-                    currentUser = {
-                        id: docSnapshot.id,
-                        ...docSnapshot.data()
-                    };
-                    updateCurrentUserDisplay();
-                } else {
-                    localStorage.removeItem('battleAlertUserId');
-                }
-            } catch (error) {
-                console.error('Error loading current user:', error);
-                localStorage.removeItem('battleAlertUserId');
-            }
-        }
-
-        function updateCurrentUserDisplay() {
-            if (currentUser) {
-                currentUsername.textContent = currentUser.gamerName;
-                currentUserDisplay.style.display = 'flex';
-                openRegistrationBtn.style.display = 'none';
-            } else {
-                currentUserDisplay.style.display = 'none';
-                openRegistrationBtn.style.display = 'flex';
-            }
-        }
-
-        function updateAdminControls() {
-            if (currentUser) {
-                adminControlsCard.style.display = 'block';
-            } else {
-                adminControlsCard.style.display = 'none';
-            }
         }
 
         // LOAD GAMERS
@@ -1368,6 +1413,7 @@
                 
                 renderGamersTable(allGamers);
                 populateSpecificGamerSelect(allGamers);
+                updateRecentGamersList(allGamers);
             } catch (error) {
                 console.error('Error loading gamers:', error);
                 showNotification('Error', 'Failed to load gamers');
@@ -1442,7 +1488,13 @@
                 gamersTableBody.appendChild(row);
             });
             
-            // Add event listeners
+            // Add event listeners to new buttons
+            setupTableEventListeners();
+        }
+
+        // SETUP TABLE EVENT LISTENERS
+        function setupTableEventListeners() {
+            // Add click event to gamer names
             document.querySelectorAll('.gamer-name-cell').forEach(cell => {
                 cell.addEventListener('click', (e) => {
                     const gamerId = e.currentTarget.getAttribute('data-id');
@@ -1451,6 +1503,7 @@
                 });
             });
             
+            // Add click events to quick action buttons
             document.querySelectorAll('.quick-attack-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -1495,6 +1548,46 @@
             }
         }
 
+        // UPDATE RECENT GAMERS LIST
+        function updateRecentGamersList(gamers) {
+            if (gamers.length === 0) {
+                recentGamersList.style.display = 'none';
+                return;
+            }
+            
+            recentGamersList.style.display = 'block';
+            gamersListContainer.innerHTML = '';
+            
+            // Show up to 5 recent gamers
+            const recentGamers = gamers.slice(0, 5);
+            
+            recentGamers.forEach(gamer => {
+                const listItem = document.createElement('div');
+                listItem.className = 'gamer-list-item';
+                
+                listItem.innerHTML = `
+                    <div>
+                        <strong>${gamer.gamerName}</strong>
+                        <div style="font-size: 0.8rem; color: var(--medium-gray);">${gamer.alliance}</div>
+                    </div>
+                    <button class="login-as-btn" data-name="${gamer.gamerName}">
+                        Login
+                    </button>
+                `;
+                
+                gamersListContainer.appendChild(listItem);
+            });
+            
+            // Add event listeners to login buttons
+            document.querySelectorAll('.login-as-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const gamerName = e.currentTarget.getAttribute('data-name');
+                    loginGamerNameInput.value = gamerName;
+                    loginGamerNameInput.focus();
+                });
+            });
+        }
+
         // CHECK DUPLICATE GAMER NAME
         async function checkGamerNameExists(gamerName) {
             try {
@@ -1510,11 +1603,59 @@
             }
         }
 
+        // LOGIN FUNCTION
+        async function loginUser(gamerName) {
+            if (!gamerName.trim()) {
+                showNotification('Error', 'Please enter a gamer name');
+                return false;
+            }
+            
+            try {
+                const q = query(
+                    collection(db, 'members'),
+                    where('gamerName', '==', gamerName.trim())
+                );
+                
+                const querySnapshot = await getDocs(q);
+                
+                if (querySnapshot.empty) {
+                    loginError.style.display = 'block';
+                    showNotification('Error', `Gamer "${gamerName}" not found. Please check the name or register as a new user.`);
+                    return false;
+                }
+                
+                const docSnapshot = querySnapshot.docs[0];
+                currentUser = {
+                    id: docSnapshot.id,
+                    ...docSnapshot.data()
+                };
+                
+                // Save user to localStorage for auto-login
+                localStorage.setItem('battleAlertCurrentUser', JSON.stringify({
+                    gamerName: currentUser.gamerName,
+                    id: currentUser.id
+                }));
+                
+                showUserInterface();
+                loginModal.style.display = 'none';
+                loginGamerNameInput.value = '';
+                loginError.style.display = 'none';
+                
+                showNotification('Success', `Welcome back, ${currentUser.gamerName}!`);
+                return true;
+                
+            } catch (error) {
+                console.error('Error logging in:', error);
+                showNotification('Error', 'Failed to login. Please try again.');
+                return false;
+            }
+        }
+
         // OPEN QUICK ALERT MODAL
         function openQuickAlertModal(gamerId, gamerName) {
             if (!currentUser) {
-                showNotification('Error', 'Please register first');
-                openRegistrationBtn.click();
+                showNotification('Error', 'Please login first');
+                openLoginBtn.click();
                 return;
             }
             
@@ -1533,8 +1674,8 @@
         // SEND QUICK ALERT
         async function sendQuickAlert(gamerId, gamerName, alertType = null) {
             if (!currentUser) {
-                showNotification('Error', 'Please register first');
-                openRegistrationBtn.click();
+                showNotification('Error', 'Please login first');
+                openLoginBtn.click();
                 return;
             }
             
@@ -1805,8 +1946,8 @@
         // OPEN VOTE REMOVE MODAL
         function openVoteRemoveModal(gamerId, gamerName) {
             if (!currentUser) {
-                showNotification('Error', 'Please register first');
-                openRegistrationBtn.click();
+                showNotification('Error', 'Please login first');
+                openLoginBtn.click();
                 return;
             }
             
@@ -1877,9 +2018,8 @@
         // LOGOUT
         function logout() {
             currentUser = null;
-            localStorage.removeItem('battleAlertUserId');
-            updateCurrentUserDisplay();
-            updateAdminControls();
+            localStorage.removeItem('battleAlertCurrentUser');
+            showGuestInterface();
             showNotification('Info', 'Logged out successfully');
         }
 
@@ -1941,92 +2081,6 @@
                     document.body.removeChild(tempModal);
                 }
             });
-        }
-
-        // CLEAR MY ALERTS
-        async function clearMyAlerts() {
-            if (!currentUser) return;
-            
-            try {
-                const q = query(
-                    collection(db, 'alerts'),
-                    where('recipientId', '==', currentUser.id)
-                );
-                
-                const querySnapshot = await getDocs(q);
-                const batch = writeBatch(db);
-                
-                querySnapshot.forEach((doc) => {
-                    batch.delete(doc.ref);
-                });
-                
-                await batch.commit();
-                
-                const userRef = doc(db, 'members', currentUser.id);
-                await updateDoc(userRef, {
-                    totalAlerts: 0,
-                    totalResponseTime: 0,
-                    status: 'safe'
-                });
-                
-                showNotification('Success', 'Your alerts have been cleared!');
-            } catch (error) {
-                console.error('Error clearing alerts:', error);
-                showNotification('Error', 'Failed to clear alerts');
-            }
-        }
-
-        // CLEAR ALL ALERTS
-        async function clearAllAlertLogs() {
-            try {
-                const querySnapshot = await getDocs(collection(db, 'alerts'));
-                const batch = writeBatch(db);
-                
-                querySnapshot.forEach((doc) => {
-                    batch.delete(doc.ref);
-                });
-                
-                await batch.commit();
-                
-                showNotification('Success', 'All alert logs have been cleared!');
-            } catch (error) {
-                console.error('Error clearing all alerts:', error);
-                showNotification('Error', 'Failed to clear alert logs');
-            }
-        }
-
-        // RESET STATISTICS
-        async function resetStatistics() {
-            try {
-                const alertsSnapshot = await getDocs(collection(db, 'alerts'));
-                const batch = writeBatch(db);
-                
-                alertsSnapshot.forEach((doc) => {
-                    batch.delete(doc.ref);
-                });
-                
-                await batch.commit();
-                
-                const gamersSnapshot = await getDocs(collection(db, 'members'));
-                const updateBatch = writeBatch(db);
-                
-                gamersSnapshot.forEach((doc) => {
-                    const gamerRef = doc.ref;
-                    updateBatch.update(gamerRef, {
-                        totalAlerts: 0,
-                        totalResponseTime: 0,
-                        status: 'safe',
-                        lastAlert: null
-                    });
-                });
-                
-                await updateBatch.commit();
-                
-                showNotification('Success', 'All statistics have been reset!');
-            } catch (error) {
-                console.error('Error resetting statistics:', error);
-                showNotification('Error', 'Failed to reset statistics');
-            }
         }
 
         // POPULATE SPECIFIC GAMER SELECT
@@ -2147,162 +2201,9 @@
                     return;
                 }
 
-                const { getMessaging, onMessage, isSupported } = await import(
-                    "https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging.js"
-                );
-
-                const isMessagingSupported = await isSupported();
-                if (!isMessagingSupported) {
-                    console.log('FCM not supported in this browser');
-                    return;
-                }
-
-                messagingInstance = getMessaging(app);
-
-                onMessage(messagingInstance, (payload) => {
-                    console.log('Message received:', payload);
-                    if (payload.notification) {
-                        showNotification(
-                            payload.notification.title || 'Battle Alert',
-                            payload.notification.body || 'New alert received'
-                        );
-                        
-                        checkForActiveAlerts();
-                    }
-                });
-
-                console.log('Push notifications initialized');
                 updateNotificationStatus();
             } catch (error) {
                 console.error('Error initializing push notifications:', error);
-            }
-        }
-
-        async function requestNotificationPermission() {
-            try {
-                if (Notification.permission === 'granted') {
-                    await registerFCMToken();
-                    updateNotificationStatus();
-                    showNotification('Success', 'Notifications are already enabled!');
-                    return;
-                }
-
-                const userConsent = confirm(
-                    'Battle Alert needs permission to send you notifications.\n\n' +
-                    '✓ Get instant alerts when help is needed\n' +
-                    '✓ Receive notifications even when the app is closed\n' +
-                    '✓ Works on both mobile and desktop devices\n\n' +
-                    'Click OK to enable notifications.'
-                );
-
-                if (!userConsent) {
-                    showNotification('Info', 'Notification request cancelled');
-                    return;
-                }
-
-                const permission = await Notification.requestPermission();
-
-                if (permission === 'granted') {
-                    showNotification('Success', 'Notifications enabled successfully!');
-                    await registerFCMToken();
-                    updateNotificationStatus();
-
-                    setTimeout(() => {
-                        new Notification('Battle Alert', {
-                            body: 'Notifications are now enabled! You will receive battle alerts.',
-                            icon: 'https://cdn-icons-png.flaticon.com/512/1077/1077976.png'
-                        });
-                    }, 1000);
-                } else if (permission === 'denied') {
-                    showNotification('Blocked', 'Notifications were blocked. Enable them in browser settings.');
-                    updateNotificationStatus();
-                } else {
-                    showNotification('Info', 'Notification permission not granted');
-                }
-            } catch (error) {
-                console.error('Error requesting notification permission:', error);
-                showNotification('Error', 'Failed to enable notifications');
-            }
-        }
-
-        async function registerFCMToken() {
-            try {
-                if (!messagingInstance) return;
-
-                const { getToken } = await import(
-                    "https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging.js"
-                );
-
-                const vapidKey = "BEwiF4gZjQM5OC8-G-NeTUh2Fadlr4f1w0VqRnhALtP-_RfQ4ewBYpscBEzyLSDi94yi5ixi3epQhsfKzd4-ghY";
-                const fcmToken = await getToken(messagingInstance, { vapidKey });
-
-                if (fcmToken) {
-                    console.log('FCM Token obtained:', fcmToken);
-                    localStorage.setItem('battleAlertFCMToken', fcmToken);
-                    
-                    if (currentUser) {
-                        const userRef = doc(db, 'members', currentUser.id);
-                        await updateDoc(userRef, {
-                            fcmToken: fcmToken,
-                            lastSeen: serverTimestamp()
-                        });
-                    }
-                }
-            } catch (error) {
-                console.error('Error getting FCM token:', error);
-            }
-        }
-
-        function testNotification() {
-            if (Notification.permission !== 'granted') {
-                showNotification('Error', 'Notifications are not enabled. Please enable them first.');
-                return;
-            }
-
-            showNotification('Test Notification', 'This is a test notification from Battle Alert!');
-
-            try {
-                new Notification('Battle Alert - Test', {
-                    body: 'Your notifications are working correctly!',
-                    icon: 'https://cdn-icons-png.flaticon.com/512/1077/1077976.png'
-                });
-            } catch (e) {
-                console.error('Browser notification test failed:', e);
-            }
-        }
-
-        function updateNotificationStatus() {
-            if (!notificationStatusContainer) return;
-
-            const permission = Notification.permission;
-
-            if (permission === 'granted') {
-                notificationStatusContainer.innerHTML = `
-                    <div class="notification-status-box notification-enabled">
-                        <p><i class="fas fa-check-circle" style="color: #4caf50;"></i> <strong>Notifications Enabled ✓</strong></p>
-                        <p style="font-size: 0.9rem; margin-top: 5px;">You will receive alerts on all your devices</p>
-                    </div>
-                `;
-                enableNotificationsBtn.style.display = 'none';
-                testNotificationBtn.style.display = 'block';
-            } else if (permission === 'denied') {
-                notificationStatusContainer.innerHTML = `
-                    <div class="notification-status-box notification-denied">
-                        <p><i class="fas fa-ban" style="color: #f44336;"></i> <strong>Notifications Blocked ✗</strong></p>
-                        <p style="font-size: 0.9rem; margin-top: 5px;">Enable notifications in your browser settings</p>
-                    </div>
-                `;
-                enableNotificationsBtn.style.display = 'none';
-                testNotificationBtn.style.display = 'none';
-            } else {
-                notificationStatusContainer.innerHTML = `
-                    <div class="notification-status-box notification-default">
-                        <p><i class="fas fa-bell-slash" style="color: #2196f3;"></i> <strong>Notifications Not Set Up</strong></p>
-                        <p style="font-size: 0.9rem; margin-top: 5px;">Enable notifications to receive instant battle alerts</p>
-                    </div>
-                `;
-                enableNotificationsBtn.style.display = 'block';
-                testNotificationBtn.style.display = 'none';
             }
         }
 
@@ -2315,10 +2216,64 @@
             }, 5000);
         }
 
+        function updateNotificationStatus() {
+            // Simple notification status update
+            const permission = Notification.permission;
+            
+            // You can add notification permission request later if needed
+        }
+
         // SETUP EVENT LISTENERS
         function setupEventListeners() {
+            // Login
+            openLoginBtn.addEventListener('click', () => {
+                loginModal.style.display = 'flex';
+                loginGamerNameInput.focus();
+            });
+
+            loginFromWelcomeBtn.addEventListener('click', () => {
+                loginModal.style.display = 'flex';
+                loginGamerNameInput.focus();
+            });
+
+            cancelLoginBtn.addEventListener('click', () => {
+                loginModal.style.display = 'none';
+                loginGamerNameInput.value = '';
+                loginError.style.display = 'none';
+            });
+
+            loginModal.addEventListener('click', (e) => {
+                if (e.target === loginModal) {
+                    loginModal.style.display = 'none';
+                    loginGamerNameInput.value = '';
+                    loginError.style.display = 'none';
+                }
+            });
+
+            submitLoginBtn.addEventListener('click', async () => {
+                const gamerName = loginGamerNameInput.value.trim();
+                await loginUser(gamerName);
+            });
+
+            // Enter key for login
+            loginGamerNameInput.addEventListener('keypress', async (e) => {
+                if (e.key === 'Enter') {
+                    const gamerName = loginGamerNameInput.value.trim();
+                    await loginUser(gamerName);
+                }
+            });
+
+            switchToRegisterBtn.addEventListener('click', () => {
+                loginModal.style.display = 'none';
+                registrationModal.style.display = 'flex';
+            });
+
             // Registration
             openRegistrationBtn.addEventListener('click', () => {
+                registrationModal.style.display = 'flex';
+            });
+
+            registerFromWelcomeBtn.addEventListener('click', () => {
                 registrationModal.style.display = 'flex';
             });
 
@@ -2396,11 +2351,14 @@
                         alliance: finalAlliance
                     };
 
-                    localStorage.setItem('battleAlertUserId', docRef.id);
+                    // Save user to localStorage
+                    localStorage.setItem('battleAlertCurrentUser', JSON.stringify({
+                        gamerName: currentUser.gamerName,
+                        id: currentUser.id
+                    }));
 
                     showNotification('Success', `${gamerName} has been successfully registered!`);
-                    updateCurrentUserDisplay();
-                    updateAdminControls();
+                    showUserInterface();
                     registrationForm.reset();
                     customAllianceGroup.style.display = 'none';
                     
@@ -2483,6 +2441,12 @@
                     currentUser.alliance = finalAlliance;
                     updateCurrentUserDisplay();
 
+                    // Update localStorage
+                    localStorage.setItem('battleAlertCurrentUser', JSON.stringify({
+                        gamerName: currentUser.gamerName,
+                        id: currentUser.id
+                    }));
+
                     showNotification('Success', 'Profile updated successfully!');
                     editProfileModal.style.display = 'none';
                     editProfileForm.reset();
@@ -2496,8 +2460,8 @@
             // Send alert
             openSendAlertBtn.addEventListener('click', () => {
                 if (!currentUser) {
-                    showNotification('Error', 'Please register first');
-                    openRegistrationBtn.click();
+                    showNotification('Error', 'Please login first');
+                    openLoginBtn.click();
                     return;
                 }
                 sendAlertModal.style.display = 'flex';
@@ -2693,77 +2657,9 @@
                 openEditProfileModal(currentUser.id);
             });
 
-            clearMyAlertsBtn.addEventListener('click', async () => {
-                profileDropdownMenu.classList.remove('show');
-                if (confirm('Are you sure you want to clear all your alerts? This cannot be undone.')) {
-                    await clearMyAlerts();
-                }
-            });
-
             logoutHeaderBtn.addEventListener('click', () => {
                 profileDropdownMenu.classList.remove('show');
                 logout();
-            });
-
-            // Admin controls
-            clearAllAlertsBtn.addEventListener('click', () => {
-                clearAlertsModal.style.display = 'flex';
-            });
-
-            resetStatsBtn.addEventListener('click', () => {
-                resetStatsModal.style.display = 'flex';
-            });
-
-            // Clear alerts modal
-            cancelClearAlertsBtn.addEventListener('click', () => {
-                clearAlertsModal.style.display = 'none';
-                confirmClearCheckbox.checked = false;
-                confirmClearAlertsBtn.disabled = true;
-            });
-
-            clearAlertsModal.addEventListener('click', (e) => {
-                if (e.target === clearAlertsModal) {
-                    clearAlertsModal.style.display = 'none';
-                    confirmClearCheckbox.checked = false;
-                    confirmClearAlertsBtn.disabled = true;
-                }
-            });
-
-            confirmClearCheckbox.addEventListener('change', () => {
-                confirmClearAlertsBtn.disabled = !confirmClearCheckbox.checked;
-            });
-
-            confirmClearAlertsBtn.addEventListener('click', async () => {
-                await clearAllAlertLogs();
-                clearAlertsModal.style.display = 'none';
-                confirmClearCheckbox.checked = false;
-                confirmClearAlertsBtn.disabled = true;
-            });
-
-            // Reset stats modal
-            cancelResetStatsBtn.addEventListener('click', () => {
-                resetStatsModal.style.display = 'none';
-                confirmResetCheckbox.checked = false;
-                confirmResetStatsBtn.disabled = true;
-            });
-
-            resetStatsModal.addEventListener('click', (e) => {
-                if (e.target === resetStatsModal) {
-                    resetStatsModal.style.display = 'none';
-                    confirmResetCheckbox.checked = false;
-                    confirmResetStatsBtn.disabled = true;
-                }
-            });
-
-            confirmResetCheckbox.addEventListener('change', () => {
-                confirmResetStatsBtn.disabled = !confirmResetCheckbox.checked;
-            });
-
-            confirmResetStatsBtn.addEventListener('click', async () => {
-                await resetStatistics();
-                resetStatsModal.style.display = 'none';
-                confirmResetCheckbox.checked = false;
-                confirmResetStatsBtn.disabled = true;
             });
 
             // Search and filter
@@ -2789,10 +2685,13 @@
                     filterAndSortGamers();
                 });
             });
+        }
 
-            // Notifications
-            enableNotificationsBtn.addEventListener('click', requestNotificationPermission);
-            testNotificationBtn.addEventListener('click', testNotification);
+        // Update current user display
+        function updateCurrentUserDisplay() {
+            if (currentUser) {
+                currentUsername.textContent = currentUser.gamerName;
+            }
         }
     </script>
 </body>
