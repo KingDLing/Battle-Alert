@@ -865,6 +865,20 @@
         .pin-input:focus {
             border-color: var(--primary-red);
         }
+        
+        .device-info {
+            background-color: rgba(33, 150, 243, 0.1);
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 0.85rem;
+            border-left: 3px solid var(--info-blue);
+        }
+        
+        .device-info i {
+            color: var(--info-blue);
+            margin-right: 5px;
+        }
     </style>
 </head>
 <body>
@@ -1056,7 +1070,7 @@
             </div>
             <div class="form-actions">
                 <button type="button" class="form-btn form-btn-secondary" id="cancel-quick-alert">Cancel</button>
-                <button type="button" class="form-btn form-btn-primary" id="send-quick-alert">Send Alert</button>
+                    <button type="button" class="form-btn form-btn-primary" id="send-quick-alert">Send Alert</button>
             </div>
         </div>
     </div>
@@ -1318,6 +1332,10 @@
             <div class="card">
                 <h2 class="card-title"><i class="fas fa-bell"></i> Notification Settings</h2>
                 <div id="notification-status-container"></div>
+                <div id="device-compatibility-info" class="device-info" style="display: none;">
+                    <i class="fas fa-info-circle"></i>
+                    <span id="device-info-text"></span>
+                </div>
                 <button class="alert-btn alert-btn-primary" id="enable-notifications-btn">
                     <i class="fas fa-bell"></i> Enable Browser Notifications
                 </button>
@@ -1427,6 +1445,7 @@
         let pinAttempts = 0;
         const MAX_PIN_ATTEMPTS = 3;
         let notificationsEnabled = true;
+        let serviceWorkerRegistration = null;
 
         async function hashPin(pin) {
             const pinWithSalt = pin + 'battleAlertSalt2026';
@@ -1535,6 +1554,8 @@
         const notificationStatusContainer = document.getElementById('notification-status-container');
         const enableNotificationsBtn = document.getElementById('enable-notifications-btn');
         const testNotificationBtn = document.getElementById('test-notification-btn');
+        const deviceCompatibilityInfo = document.getElementById('device-compatibility-info');
+        const deviceInfoText = document.getElementById('device-info-text');
         
         const searchGamersInput = document.getElementById('search-gamers');
         const filterAllianceSelect = document.getElementById('filter-alliance');
@@ -1562,8 +1583,52 @@
             localStorage.setItem('battleAlertNotificationsEnabled', notificationsEnabled.toString());
         }
 
+        function detectDeviceInfo() {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+            const isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
+            
+            let deviceType = 'Desktop';
+            if (isMobile) deviceType = 'Mobile';
+            if (isIOS) deviceType = 'iOS';
+            
+            let browser = 'Unknown';
+            if (isSafari) browser = 'Safari';
+            else if (isFirefox) browser = 'Firefox';
+            else if (navigator.userAgent.indexOf('Chrome') > -1) browser = 'Chrome';
+            
+            return {
+                isMobile,
+                isIOS,
+                isSafari,
+                isFirefox,
+                deviceType,
+                browser
+            };
+        }
+
+        function showDeviceCompatibilityInfo() {
+            const deviceInfo = detectDeviceInfo();
+            let message = '';
+            
+            if (deviceInfo.isIOS && deviceInfo.isSafari) {
+                message = 'iOS Safari requires website to be added to Home Screen for push notifications.';
+            } else if (deviceInfo.isIOS) {
+                message = 'iOS devices require special setup for push notifications.';
+            } else if (deviceInfo.isMobile) {
+                message = 'Make sure notifications are enabled in your browser settings.';
+            } else {
+                message = `Using ${deviceInfo.browser} on ${deviceInfo.deviceType}.`;
+            }
+            
+            deviceInfoText.textContent = message;
+            deviceCompatibilityInfo.style.display = 'block';
+        }
+
         document.addEventListener('DOMContentLoaded', async function() {
             loadNotificationSettings();
+            showDeviceCompatibilityInfo();
             
             const savedUser = localStorage.getItem('battleAlertCurrentUser');
             if (savedUser) {
@@ -1602,6 +1667,386 @@
             checkForActiveAlerts();
             setupRealtimeUpdates();
         });
+
+        async function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                try {
+                    // Create a simple service worker script in memory
+                    const serviceWorkerScript = `
+                        self.addEventListener('install', (event) => {
+                            self.skipWaiting();
+                        });
+                        
+                        self.addEventListener('activate', (event) => {
+                            event.waitUntil(clients.claim());
+                        });
+                        
+                        importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js');
+                        importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js');
+                        
+                        firebase.initializeApp({
+                            apiKey: "AIzaSyAqqujNlqmiqlVKXz6WBxfgSXnHP8gIqIk",
+                            authDomain: "battle-alert.firebaseapp.com",
+                            projectId: "battle-alert",
+                            storageBucket: "battle-alert.firebasestorage.app",
+                            messagingSenderId: "724267211096",
+                            appId: "1:724267211096:web:8af6a8a63cf0eabb6bed2d"
+                        });
+                        
+                        const messaging = firebase.messaging();
+                        
+                        messaging.onBackgroundMessage((payload) => {
+                            const notificationTitle = payload.notification?.title || 'Battle Alert';
+                            const notificationOptions = {
+                                body: payload.notification?.body || 'New alert received',
+                                icon: 'https://cdn-icons-png.flaticon.com/512/1077/1077976.png',
+                                badge: 'https://cdn-icons-png.flaticon.com/512/1077/1077976.png'
+                            };
+                            
+                            self.registration.showNotification(notificationTitle, notificationOptions);
+                        });
+                    `;
+                    
+                    // Create a blob URL for the service worker
+                    const blob = new Blob([serviceWorkerScript], { type: 'application/javascript' });
+                    const swUrl = URL.createObjectURL(blob);
+                    
+                    serviceWorkerRegistration = await navigator.serviceWorker.register(swUrl);
+                    console.log('Service Worker registered:', serviceWorkerRegistration);
+                    
+                    // Clean up the blob URL
+                    URL.revokeObjectURL(swUrl);
+                    
+                    return serviceWorkerRegistration;
+                } catch (error) {
+                    console.error('Service Worker registration failed:', error);
+                    return null;
+                }
+            }
+            return null;
+        }
+
+        async function initializePushNotifications() {
+            try {
+                if (!('Notification' in window)) {
+                    console.log('Browser does not support notifications');
+                    showDeviceSpecificMessage('This browser does not support notifications.');
+                    return;
+                }
+                
+                if (!('serviceWorker' in navigator)) {
+                    console.log('Service Worker not supported');
+                    showDeviceSpecificMessage('Push notifications require Service Worker support.');
+                    return;
+                }
+                
+                if (!('PushManager' in window)) {
+                    console.log('Push API not supported');
+                    showDeviceSpecificMessage('Push API is not supported in this browser.');
+                    return;
+                }
+                
+                const deviceInfo = detectDeviceInfo();
+                
+                // Register service worker first
+                await registerServiceWorker();
+                
+                // Initialize Firebase Messaging
+                const { getMessaging, onMessage, isSupported, getToken } = await import(
+                    "https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging.js"
+                );
+                
+                const isMessagingSupported = await isSupported();
+                if (!isMessagingSupported) {
+                    console.log('FCM not supported in this browser');
+                    showDeviceSpecificMessage('Firebase Cloud Messaging is not supported.');
+                    return;
+                }
+                
+                messagingInstance = getMessaging(app);
+                
+                // Request permission and get token
+                if (Notification.permission === 'default' && notificationsEnabled) {
+                    await requestNotificationPermission();
+                } else if (Notification.permission === 'granted' && notificationsEnabled) {
+                    await getAndStoreFCMToken();
+                }
+                
+                // Listen for messages
+                onMessage(messagingInstance, (payload) => {
+                    console.log('Foreground message received:', payload);
+                    if (payload.notification && notificationsEnabled) {
+                        showNotification(
+                            payload.notification.title || 'Battle Alert',
+                            payload.notification.body || 'New alert received'
+                        );
+                        
+                        checkForActiveAlerts();
+                    }
+                });
+                
+                console.log('Push notifications initialized successfully');
+                updateNotificationStatus();
+                
+            } catch (error) {
+                console.error('Error initializing push notifications:', error);
+                showDeviceSpecificMessage('Failed to initialize notifications. Check browser permissions.');
+            }
+        }
+        
+        function showDeviceSpecificMessage(message) {
+            deviceInfoText.textContent = message;
+            deviceCompatibilityInfo.style.display = 'block';
+        }
+        
+        async function getAndStoreFCMToken() {
+            try {
+                if (!messagingInstance || !serviceWorkerRegistration) return;
+                
+                const { getToken } = await import(
+                    "https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging.js"
+                );
+                
+                const vapidKey = "BEwiF4gZjQM5OC8-G-NeTUh2Fadlr4f1w0VqRnhALtP-_RfQ4ewBYpscBEzyLSDi94yi5ixi3epQhsfKzd4-ghY";
+                const fcmToken = await getToken(messagingInstance, { 
+                    vapidKey,
+                    serviceWorkerRegistration: serviceWorkerRegistration
+                });
+                
+                if (fcmToken) {
+                    console.log('FCM Token obtained:', fcmToken);
+                    localStorage.setItem('battleAlertFCMToken', fcmToken);
+                    
+                    if (currentUser) {
+                        const userRef = doc(db, 'members', currentUser.id);
+                        await updateDoc(userRef, {
+                            fcmToken: fcmToken,
+                            lastSeen: serverTimestamp()
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Error getting FCM token:', error);
+                
+                // Handle specific errors
+                if (error.code === 'messaging/permission-blocked') {
+                    showDeviceSpecificMessage('Notifications blocked. Enable in browser settings.');
+                } else if (error.code === 'messaging/unsupported-browser') {
+                    showDeviceSpecificMessage('Browser does not support push notifications.');
+                }
+            }
+        }
+
+        async function requestNotificationPermission() {
+            try {
+                const deviceInfo = detectDeviceInfo();
+                
+                // Special handling for iOS Safari
+                if (deviceInfo.isIOS && deviceInfo.isSafari) {
+                    const iosMessage = `
+                        iOS Safari requires additional setup:
+                        1. Tap the Share button
+                        2. Scroll down and tap "Add to Home Screen"
+                        3. Open the app from your Home Screen
+                        4. Enable notifications when prompted
+                    `;
+                    
+                    if (confirm(iosMessage + '\n\nWould you like to continue?')) {
+                        const permission = await Notification.requestPermission();
+                        handlePermissionResult(permission);
+                    }
+                    return;
+                }
+                
+                // Standard permission request for other browsers
+                const userConsent = confirm(
+                    'Battle Alert needs permission to send you notifications.\n\n' +
+                    '✓ Get instant alerts when help is needed\n' +
+                    '✓ Receive notifications even when the app is closed\n' +
+                    '✓ Works on both mobile and desktop devices\n\n' +
+                    'Click OK to enable notifications.'
+                );
+
+                if (!userConsent) {
+                    showNotification('Info', 'Notification request cancelled');
+                    return;
+                }
+
+                const permission = await Notification.requestPermission();
+                handlePermissionResult(permission);
+                
+            } catch (error) {
+                console.error('Error requesting notification permission:', error);
+                showNotification('Error', 'Failed to enable notifications');
+            }
+        }
+        
+        async function handlePermissionResult(permission) {
+            if (permission === 'granted') {
+                notificationsEnabled = true;
+                saveNotificationSettings();
+                showNotification('Success', 'Notifications enabled successfully!');
+                
+                // Get and store FCM token
+                await getAndStoreFCMToken();
+                updateNotificationStatus();
+                
+                // Show test notification after a delay
+                setTimeout(() => {
+                    if (notificationsEnabled) {
+                        try {
+                            new Notification('Battle Alert', {
+                                body: 'Notifications are now enabled! You will receive battle alerts.',
+                                icon: 'https://cdn-icons-png.flaticon.com/512/1077/1077976.png',
+                                badge: 'https://cdn-icons-png.flaticon.com/512/1077/1077976.png'
+                            });
+                        } catch (e) {
+                            console.error('Browser notification failed:', e);
+                        }
+                    }
+                }, 1000);
+            } else if (permission === 'denied') {
+                notificationsEnabled = false;
+                saveNotificationSettings();
+                showNotification('Blocked', 'Notifications were blocked. Enable them in browser settings.');
+                updateNotificationStatus();
+            } else {
+                notificationsEnabled = false;
+                saveNotificationSettings();
+                showNotification('Info', 'Notification permission not granted');
+            }
+        }
+
+        function disableNotifications() {
+            notificationsEnabled = false;
+            saveNotificationSettings();
+            updateNotificationStatus();
+            showNotification('Notifications Disabled', 'You will no longer receive browser notifications.');
+        }
+
+        function enableExistingNotifications() {
+            notificationsEnabled = true;
+            saveNotificationSettings();
+            updateNotificationStatus();
+            showNotification('Notifications Enabled', 'Browser notifications are now enabled!');
+        }
+
+        function testNotification() {
+            if (Notification.permission !== 'granted') {
+                showNotification('Error', 'Notifications are not enabled. Please enable them first.');
+                return;
+            }
+
+            if (!notificationsEnabled) {
+                showNotification('Error', 'Notifications are disabled. Enable them in notification settings.');
+                return;
+            }
+
+            showNotification('Test Notification', 'This is a test notification from Battle Alert!');
+
+            try {
+                new Notification('Battle Alert - Test', {
+                    body: 'Your notifications are working correctly!',
+                    icon: 'https://cdn-icons-png.flaticon.com/512/1077/1077976.png',
+                    badge: 'https://cdn-icons-png.flaticon.com/512/1077/1077976.png'
+                });
+            } catch (e) {
+                console.error('Browser notification test failed:', e);
+            }
+        }
+
+        function updateNotificationStatus() {
+            if (!notificationStatusContainer) return;
+
+            const permission = Notification.permission;
+            const deviceInfo = detectDeviceInfo();
+            
+            if (permission === 'granted' && notificationsEnabled) {
+                notificationStatusContainer.innerHTML = `
+                    <div class="notification-status-box notification-enabled">
+                        <p><i class="fas fa-check-circle" style="color: #4caf50;"></i> <strong>Notifications Enabled ✓</strong></p>
+                        <p style="font-size: 0.9rem; margin-top: 5px;">
+                            ${deviceInfo.isMobile ? 'Mobile' : 'Desktop'} notifications are active
+                        </p>
+                        <div style="margin-top: 10px;">
+                            <button class="action-btn" id="disable-notifications-btn" 
+                                    style="background-color: var(--medium-gray);">
+                                <i class="fas fa-bell-slash"></i> Disable Notifications
+                            </button>
+                        </div>
+                    </div>
+                `;
+                enableNotificationsBtn.style.display = 'none';
+                testNotificationBtn.style.display = 'block';
+            } else if (permission === 'granted' && !notificationsEnabled) {
+                notificationStatusContainer.innerHTML = `
+                    <div class="notification-status-box notification-default">
+                        <p><i class="fas fa-bell-slash" style="color: #2196f3;"></i> <strong>Notifications Disabled</strong></p>
+                        <p style="font-size: 0.9rem; margin-top: 5px;">Notifications are available but currently disabled</p>
+                        <div style="margin-top: 10px;">
+                            <button class="action-btn" id="enable-notifications-btn-existing">
+                                <i class="fas fa-bell"></i> Enable Notifications
+                            </button>
+                        </div>
+                    </div>
+                `;
+                enableNotificationsBtn.style.display = 'none';
+                testNotificationBtn.style.display = 'none';
+            } else if (permission === 'denied') {
+                notificationStatusContainer.innerHTML = `
+                    <div class="notification-status-box notification-denied">
+                        <p><i class="fas fa-ban" style="color: #f44336;"></i> <strong>Notifications Blocked ✗</strong></p>
+                        <p style="font-size: 0.9rem; margin-top: 5px;">Enable notifications in your browser settings</p>
+                        <div style="margin-top: 10px;">
+                            <button class="action-btn" id="request-permission-again-btn">
+                                <i class="fas fa-cog"></i> Open Browser Settings
+                            </button>
+                        </div>
+                    </div>
+                `;
+                enableNotificationsBtn.style.display = 'none';
+                testNotificationBtn.style.display = 'none';
+            } else {
+                notificationStatusContainer.innerHTML = `
+                    <div class="notification-status-box notification-default">
+                        <p><i class="fas fa-bell-slash" style="color: #2196f3;"></i> <strong>Notifications Not Set Up</strong></p>
+                        <p style="font-size: 0.9rem; margin-top: 5px;">Enable notifications to receive instant battle alerts</p>
+                    </div>
+                `;
+                enableNotificationsBtn.style.display = 'block';
+                testNotificationBtn.style.display = 'none';
+            }
+            
+            setTimeout(() => {
+                const disableBtn = document.getElementById('disable-notifications-btn');
+                if (disableBtn) {
+                    disableBtn.addEventListener('click', disableNotifications);
+                }
+                
+                const enableExistingBtn = document.getElementById('enable-notifications-btn-existing');
+                if (enableExistingBtn) {
+                    enableExistingBtn.addEventListener('click', enableExistingNotifications);
+                }
+                
+                const requestAgainBtn = document.getElementById('request-permission-again-btn');
+                if (requestAgainBtn) {
+                    requestAgainBtn.addEventListener('click', () => {
+                        const deviceInfo = detectDeviceInfo();
+                        let helpMessage = '';
+                        
+                        if (deviceInfo.isIOS) {
+                            helpMessage = 'iOS: Settings > Safari > Notifications > Allow for this website';
+                        } else if (deviceInfo.isMobile) {
+                            helpMessage = 'Mobile: Browser settings > Site settings > Notifications > Allow';
+                        } else {
+                            helpMessage = 'Desktop: Click the lock icon in address bar > Site settings > Notifications > Allow';
+                        }
+                        
+                        showNotification('Help', helpMessage);
+                    });
+                }
+            }, 100);
+        }
 
         function showGuestInterface() {
             guestWelcome.style.display = 'block';
@@ -2717,245 +3162,6 @@
             } catch (error) {
                 console.error('Error updating stats:', error);
             }
-        }
-
-        async function initializePushNotifications() {
-            try {
-                if (!('Notification' in window)) {
-                    console.log('Browser does not support notifications');
-                    return;
-                }
-
-                const { getMessaging, onMessage, isSupported } = await import(
-                    "https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging.js"
-                );
-
-                const isMessagingSupported = await isSupported();
-                if (!isMessagingSupported) {
-                    console.log('FCM not supported in this browser');
-                    return;
-                }
-
-                messagingInstance = getMessaging(app);
-
-                onMessage(messagingInstance, (payload) => {
-                    console.log('Message received:', payload);
-                    if (payload.notification && notificationsEnabled) {
-                        showNotification(
-                            payload.notification.title || 'Battle Alert',
-                            payload.notification.body || 'New alert received'
-                        );
-                        
-                        checkForActiveAlerts();
-                    }
-                });
-
-                console.log('Push notifications initialized');
-                updateNotificationStatus();
-            } catch (error) {
-                console.error('Error initializing push notifications:', error);
-            }
-        }
-
-        function disableNotifications() {
-            notificationsEnabled = false;
-            saveNotificationSettings();
-            updateNotificationStatus();
-            showNotification('Notifications Disabled', 'You will no longer receive browser notifications.');
-        }
-
-        function enableExistingNotifications() {
-            notificationsEnabled = true;
-            saveNotificationSettings();
-            updateNotificationStatus();
-            showNotification('Notifications Enabled', 'Browser notifications are now enabled!');
-        }
-
-        async function requestNotificationPermission() {
-            try {
-                if (Notification.permission === 'granted') {
-                    notificationsEnabled = true;
-                    saveNotificationSettings();
-                    await registerFCMToken();
-                    updateNotificationStatus();
-                    showNotification('Success', 'Notifications are now enabled!');
-                    return;
-                }
-
-                const userConsent = confirm(
-                    'Battle Alert needs permission to send you notifications.\n\n' +
-                    '✓ Get instant alerts when help is needed\n' +
-                    '✓ Receive notifications even when the app is closed\n' +
-                    '✓ Works on both mobile and desktop devices\n\n' +
-                    'Click OK to enable notifications.'
-                );
-
-                if (!userConsent) {
-                    showNotification('Info', 'Notification request cancelled');
-                    return;
-                }
-
-                const permission = await Notification.requestPermission();
-
-                if (permission === 'granted') {
-                    notificationsEnabled = true;
-                    saveNotificationSettings();
-                    showNotification('Success', 'Notifications enabled successfully!');
-                    await registerFCMToken();
-                    updateNotificationStatus();
-
-                    setTimeout(() => {
-                        if (notificationsEnabled) {
-                            new Notification('Battle Alert', {
-                                body: 'Notifications are now enabled! You will receive battle alerts.',
-                                icon: 'https://cdn-icons-png.flaticon.com/512/1077/1077976.png'
-                            });
-                        }
-                    }, 1000);
-                } else if (permission === 'denied') {
-                    notificationsEnabled = false;
-                    saveNotificationSettings();
-                    showNotification('Blocked', 'Notifications were blocked. Enable them in browser settings.');
-                    updateNotificationStatus();
-                } else {
-                    notificationsEnabled = false;
-                    saveNotificationSettings();
-                    showNotification('Info', 'Notification permission not granted');
-                }
-            } catch (error) {
-                console.error('Error requesting notification permission:', error);
-                showNotification('Error', 'Failed to enable notifications');
-            }
-        }
-
-        async function registerFCMToken() {
-            try {
-                if (!messagingInstance) return;
-
-                const { getToken } = await import(
-                    "https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging.js"
-                );
-
-                const vapidKey = "BEwiF4gZjQM5OC8-G-NeTUh2Fadlr4f1w0VqRnhALtP-_RfQ4ewBYpscBEzyLSDi94yi5ixi3epQhsfKzd4-ghY";
-                const fcmToken = await getToken(messagingInstance, { vapidKey });
-
-                if (fcmToken) {
-                    console.log('FCM Token obtained:', fcmToken);
-                    localStorage.setItem('battleAlertFCMToken', fcmToken);
-                    
-                    if (currentUser) {
-                        const userRef = doc(db, 'members', currentUser.id);
-                        await updateDoc(userRef, {
-                            fcmToken: fcmToken,
-                            lastSeen: serverTimestamp()
-                        });
-                    }
-                }
-            } catch (error) {
-                console.error('Error getting FCM token:', error);
-            }
-        }
-
-        function testNotification() {
-            if (Notification.permission !== 'granted') {
-                showNotification('Error', 'Notifications are not enabled. Please enable them first.');
-                return;
-            }
-
-            if (!notificationsEnabled) {
-                showNotification('Error', 'Notifications are disabled. Enable them in notification settings.');
-                return;
-            }
-
-            showNotification('Test Notification', 'This is a test notification from Battle Alert!');
-
-            try {
-                new Notification('Battle Alert - Test', {
-                    body: 'Your notifications are working correctly!',
-                    icon: 'https://cdn-icons-png.flaticon.com/512/1077/1077976.png'
-                });
-            } catch (e) {
-                console.error('Browser notification test failed:', e);
-            }
-        }
-
-        function updateNotificationStatus() {
-            if (!notificationStatusContainer) return;
-
-            const permission = Notification.permission;
-            
-            if (permission === 'granted' && notificationsEnabled) {
-                notificationStatusContainer.innerHTML = `
-                    <div class="notification-status-box notification-enabled">
-                        <p><i class="fas fa-check-circle" style="color: #4caf50;"></i> <strong>Notifications Enabled ✓</strong></p>
-                        <p style="font-size: 0.9rem; margin-top: 5px;">You will receive alerts on all your devices</p>
-                        <div style="margin-top: 10px;">
-                            <button class="action-btn" id="disable-notifications-btn" 
-                                    style="background-color: var(--medium-gray);">
-                                <i class="fas fa-bell-slash"></i> Disable Notifications
-                            </button>
-                        </div>
-                    </div>
-                `;
-                enableNotificationsBtn.style.display = 'none';
-                testNotificationBtn.style.display = 'block';
-            } else if (permission === 'granted' && !notificationsEnabled) {
-                notificationStatusContainer.innerHTML = `
-                    <div class="notification-status-box notification-default">
-                        <p><i class="fas fa-bell-slash" style="color: #2196f3;"></i> <strong>Notifications Disabled</strong></p>
-                        <p style="font-size: 0.9rem; margin-top: 5px;">Notifications are available but currently disabled</p>
-                        <div style="margin-top: 10px;">
-                            <button class="action-btn" id="enable-notifications-btn-existing">
-                                <i class="fas fa-bell"></i> Enable Notifications
-                            </button>
-                        </div>
-                    </div>
-                `;
-                enableNotificationsBtn.style.display = 'none';
-                testNotificationBtn.style.display = 'none';
-            } else if (permission === 'denied') {
-                notificationStatusContainer.innerHTML = `
-                    <div class="notification-status-box notification-denied">
-                        <p><i class="fas fa-ban" style="color: #f44336;"></i> <strong>Notifications Blocked ✗</strong></p>
-                        <p style="font-size: 0.9rem; margin-top: 5px;">Enable notifications in your browser settings</p>
-                        <div style="margin-top: 10px;">
-                            <button class="action-btn" id="request-permission-again-btn">
-                                <i class="fas fa-cog"></i> Check Browser Settings
-                            </button>
-                        </div>
-                    </div>
-                `;
-                enableNotificationsBtn.style.display = 'none';
-                testNotificationBtn.style.display = 'none';
-            } else {
-                notificationStatusContainer.innerHTML = `
-                    <div class="notification-status-box notification-default">
-                        <p><i class="fas fa-bell-slash" style="color: #2196f3;"></i> <strong>Notifications Not Set Up</strong></p>
-                        <p style="font-size: 0.9rem; margin-top: 5px;">Enable notifications to receive instant battle alerts</p>
-                    </div>
-                `;
-                enableNotificationsBtn.style.display = 'block';
-                testNotificationBtn.style.display = 'none';
-            }
-            
-            setTimeout(() => {
-                const disableBtn = document.getElementById('disable-notifications-btn');
-                if (disableBtn) {
-                    disableBtn.addEventListener('click', disableNotifications);
-                }
-                
-                const enableExistingBtn = document.getElementById('enable-notifications-btn-existing');
-                if (enableExistingBtn) {
-                    enableExistingBtn.addEventListener('click', enableExistingNotifications);
-                }
-                
-                const requestAgainBtn = document.getElementById('request-permission-again-btn');
-                if (requestAgainBtn) {
-                    requestAgainBtn.addEventListener('click', () => {
-                        showNotification('Help', 'Go to your browser settings > Site Settings > Notifications to enable them.');
-                    });
-                }
-            }, 100);
         }
 
         function showNotification(title, message) {
