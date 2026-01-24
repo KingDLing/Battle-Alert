@@ -737,6 +737,7 @@
         .clear-alerts-btn {
             background-color: var(--medium-gray);
             color: white;
+            margin-top: 10px;
         }
         
         .clear-alerts-btn:hover {
@@ -799,6 +800,77 @@
         .login-as-btn:hover {
             background-color: #388e3c;
         }
+        
+        /* PIN MODAL STYLES */
+        .pin-btn {
+            padding: 15px;
+            font-size: 1.5rem;
+            background: var(--dark-gray);
+            color: var(--white);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .pin-btn:hover {
+            background: var(--medium-gray);
+            transform: scale(1.05);
+        }
+        
+        .pin-btn:active {
+            transform: scale(0.95);
+        }
+        
+        #pin-display {
+            font-size: 2rem;
+            letter-spacing: 15px;
+            color: var(--white);
+            margin-bottom: 10px;
+            text-align: center;
+            font-family: monospace;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #pin-error {
+            color: var(--alert-red);
+            font-size: 0.9rem;
+            height: 20px;
+            margin-top: 5px;
+            text-align: center;
+        }
+        
+        /* PIN CHANGE MODAL */
+        .pin-change-container {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        
+        .pin-input-container {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        
+        .pin-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.5rem;
+            letter-spacing: 10px;
+            text-align: center;
+            background: var(--black);
+            color: var(--white);
+            border: 2px solid var(--medium-gray);
+            border-radius: 8px;
+            outline: none;
+            font-family: monospace;
+        }
+        
+        .pin-input:focus {
+            border-color: var(--primary-red);
+        }
     </style>
 </head>
 <body>
@@ -808,7 +880,11 @@
             <h2 class="modal-title"><i class="fas fa-sign-in-alt"></i> Login to Battle Alert</h2>
             <div class="login-form-container">
                 <div class="login-instructions">
-                    <p><i class="fas fa-info-circle"></i> Login with your existing gamer name or register as a new user.</p>
+                    <p><i class="fas fa-user-shield"></i> Secure login with your gamer name and PIN.</p>
+                    <p style="font-size: 0.9rem; color: var(--warning-orange); margin-top: 10px;">
+                        <i class="fas fa-exclamation-triangle"></i> 
+                        Only login to your own account.
+                    </p>
                 </div>
                 
                 <div class="form-group">
@@ -853,6 +929,25 @@
                         This name is already taken
                     </div>
                 </div>
+                
+                <div class="form-group">
+                    <label for="gamer-pin">Create a 4-digit PIN *</label>
+                    <input type="password" id="gamer-pin" maxlength="4" pattern="[0-9]*" 
+                           placeholder="4-digit PIN (e.g., 1234)" inputmode="numeric" required>
+                    <div style="font-size: 0.8rem; color: var(--medium-gray); margin-top: 5px;">
+                        Choose a PIN you'll remember. It cannot be recovered if forgotten.
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="confirm-pin">Confirm PIN *</label>
+                    <input type="password" id="confirm-pin" maxlength="4" pattern="[0-9]*" 
+                           placeholder="Re-enter your PIN" inputmode="numeric" required>
+                    <div id="pin-error" style="color: var(--alert-red); font-size: 0.9rem; margin-top: 5px; display: none;">
+                        PINs do not match
+                    </div>
+                </div>
+                
                 <div class="form-group">
                     <label for="alliance-name">Alliance Name *</label>
                     <select id="alliance-name" required>
@@ -861,10 +956,12 @@
                         <option value="custom">Custom Alliance</option>
                     </select>
                 </div>
+                
                 <div class="form-group" id="custom-alliance-group" style="display: none;">
                     <label for="custom-alliance">Custom Alliance Name *</label>
                     <input type="text" id="custom-alliance" placeholder="Enter your alliance name">
                 </div>
+                
                 <div class="form-actions">
                     <button type="button" class="form-btn form-btn-secondary" id="cancel-registration">Cancel</button>
                     <button type="submit" class="form-btn form-btn-primary">Register</button>
@@ -1019,6 +1116,86 @@
         </div>
     </div>
 
+    <!-- CHANGE PIN MODAL -->
+    <div id="change-pin-modal" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-title"><i class="fas fa-key"></i> Change Your PIN</h2>
+            <div class="pin-change-container">
+                <div class="form-group">
+                    <label for="current-pin">Current PIN *</label>
+                    <input type="password" id="current-pin" maxlength="4" pattern="[0-9]*" 
+                           placeholder="Enter current PIN" inputmode="numeric" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="new-pin">New 4-digit PIN *</label>
+                    <input type="password" id="new-pin" maxlength="4" pattern="[0-9]*" 
+                           placeholder="Enter new PIN" inputmode="numeric" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="confirm-new-pin">Confirm New PIN *</label>
+                    <input type="password" id="confirm-new-pin" maxlength="4" pattern="[0-9]*" 
+                           placeholder="Re-enter new PIN" inputmode="numeric" required>
+                    <div id="new-pin-error" style="color: var(--alert-red); font-size: 0.9rem; margin-top: 5px; display: none;">
+                        PINs do not match
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="form-btn form-btn-secondary" id="cancel-pin-change">Cancel</button>
+                    <button type="button" class="form-btn form-btn-primary" id="submit-pin-change">Change PIN</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CLEAR ALERTS MODAL -->
+    <div id="clear-alerts-modal" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-title"><i class="fas fa-trash-alt"></i> Clear All Alerts</h2>
+            <div id="clear-alerts-content">
+                <p>Are you sure you want to clear all alert logs?</p>
+                <p style="color: var(--medium-gray); font-size: 0.9rem; margin-top: 10px;">
+                    This will remove all alert history but will NOT affect gamer statistics.
+                </p>
+                <div class="form-group" style="margin-top: 20px;">
+                    <label>
+                        <input type="checkbox" id="confirm-clear">
+                        I understand this action cannot be undone
+                    </label>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="form-btn form-btn-secondary" id="cancel-clear-alerts">Cancel</button>
+                <button type="button" class="form-btn form-btn-danger" id="confirm-clear-alerts" disabled>Clear All Alerts</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- RESET STATS MODAL -->
+    <div id="reset-stats-modal" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-title"><i class="fas fa-chart-line"></i> Reset Statistics</h2>
+            <div id="reset-stats-content">
+                <p>Are you sure you want to reset all statistics?</p>
+                <p style="color: var(--medium-gray); font-size: 0.9rem; margin-top: 10px;">
+                    This will reset today's alerts, total alerts, and response times to zero.
+                </p>
+                <div class="form-group" style="margin-top: 20px;">
+                    <label>
+                        <input type="checkbox" id="confirm-reset">
+                        I understand this action cannot be undone
+                    </label>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="form-btn form-btn-secondary" id="cancel-reset-stats">Cancel</button>
+                <button type="button" class="form-btn form-btn-danger" id="confirm-reset-stats" disabled>Reset Statistics</button>
+            </div>
+        </div>
+    </div>
+
     <!-- MAIN APP -->
     <div class="container">
         <header>
@@ -1045,6 +1222,12 @@
                             </div>
                             <div class="dropdown-item" id="edit-profile-header-btn">
                                 <i class="fas fa-edit"></i> Edit Profile
+                            </div>
+                            <div class="dropdown-item" id="change-pin-btn">
+                                <i class="fas fa-key"></i> Change PIN
+                            </div>
+                            <div class="dropdown-item" id="clear-my-alerts-btn">
+                                <i class="fas fa-bell-slash"></i> Clear My Alerts
                             </div>
                             <div class="dropdown-item danger" id="logout-header-btn">
                                 <i class="fas fa-sign-out-alt"></i> Logout
@@ -1112,12 +1295,43 @@
                 </div>
             </div>
 
+            <!-- ADMIN CONTROLS -->
+            <div class="card" id="admin-controls-card" style="display: none;">
+                <h2 class="card-title"><i class="fas fa-user-shield"></i> Admin Controls</h2>
+                <div class="admin-controls">
+                    <h4><i class="fas fa-cogs"></i> System Management</h4>
+                    <div class="action-buttons">
+                        <button class="action-btn clear-alerts-btn" id="clear-all-alerts-btn">
+                            <i class="fas fa-trash-alt"></i> Clear All Alert Logs
+                        </button>
+                        <button class="action-btn vote-btn" id="reset-stats-btn">
+                            <i class="fas fa-chart-line"></i> Reset Statistics
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <div class="card">
                 <h2 class="card-title"><i class="fas fa-history"></i> Recent Alert Log</h2>
                 <div class="alert-log-container" id="alert-log-container">
                     <div style="text-align: center; padding: 20px; color: var(--medium-gray);">
                         No alerts sent yet
                     </div>
+                </div>
+            </div>
+
+            <!-- NOTIFICATION SETTINGS -->
+            <div class="card">
+                <h2 class="card-title"><i class="fas fa-bell"></i> Notification Settings</h2>
+                <div id="notification-status-container"></div>
+                <button class="alert-btn alert-btn-primary" id="enable-notifications-btn">
+                    <i class="fas fa-bell"></i> Enable Browser Notifications
+                </button>
+                <button class="alert-btn alert-btn-primary" id="test-notification-btn" style="display: none; margin-top: 10px;">
+                    <i class="fas fa-check"></i> Test Notification
+                </button>
+                <div style="margin-top: 15px; font-size: 0.9rem; color: var(--medium-gray);">
+                    <p><i class="fas fa-info-circle"></i> Get alerts on all devices when help is needed</p>
                 </div>
             </div>
 
@@ -1216,6 +1430,30 @@
         let currentAlert = null;
         let currentVoteGamer = null;
         let quickAlertGamer = null;
+        let pinAttempts = 0;
+        const MAX_PIN_ATTEMPTS = 3;
+
+        // PIN Hashing Functions
+        async function hashPin(pin) {
+            // Add salt to prevent rainbow table attacks
+            const pinWithSalt = pin + 'battleAlertSalt2026';
+            
+            // Create SHA-256 hash
+            const encoder = new TextEncoder();
+            const data = encoder.encode(pinWithSalt);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            
+            // Convert to hex string
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            
+            return hashHex;
+        }
+
+        async function verifyPin(enteredPin, storedHash) {
+            const enteredHash = await hashPin(enteredPin);
+            return enteredHash === storedHash;
+        }
 
         // MODAL ELEMENTS
         const loginModal = document.getElementById('login-modal');
@@ -1235,6 +1473,7 @@
         const allianceSelect = document.getElementById('alliance-name');
         const customAllianceGroup = document.getElementById('custom-alliance-group');
         const nameError = document.getElementById('name-error');
+        const pinError = document.getElementById('pin-error');
         
         const editProfileModal = document.getElementById('edit-profile-modal');
         const editProfileForm = document.getElementById('edit-profile-form');
@@ -1270,6 +1509,21 @@
         const currentVotesContainer = document.getElementById('current-votes-container');
         const votesList = document.getElementById('votes-list');
         
+        const changePinModal = document.getElementById('change-pin-modal');
+        const cancelPinChangeBtn = document.getElementById('cancel-pin-change');
+        const submitPinChangeBtn = document.getElementById('submit-pin-change');
+        const newPinError = document.getElementById('new-pin-error');
+        
+        const clearAlertsModal = document.getElementById('clear-alerts-modal');
+        const cancelClearAlertsBtn = document.getElementById('cancel-clear-alerts');
+        const confirmClearAlertsBtn = document.getElementById('confirm-clear-alerts');
+        const confirmClearCheckbox = document.getElementById('confirm-clear');
+        
+        const resetStatsModal = document.getElementById('reset-stats-modal');
+        const cancelResetStatsBtn = document.getElementById('cancel-reset-stats');
+        const confirmResetStatsBtn = document.getElementById('confirm-reset-stats');
+        const confirmResetCheckbox = document.getElementById('confirm-reset');
+        
         // UI ELEMENTS
         const guestWelcome = document.getElementById('guest-welcome');
         const userContent = document.getElementById('user-content');
@@ -1285,7 +1539,19 @@
         const profileDropdownMenu = document.getElementById('profile-dropdown-menu');
         const viewProfileBtn = document.getElementById('view-profile-btn');
         const editProfileHeaderBtn = document.getElementById('edit-profile-header-btn');
+        const changePinBtn = document.getElementById('change-pin-btn');
+        const clearMyAlertsBtn = document.getElementById('clear-my-alerts-btn');
         const logoutHeaderBtn = document.getElementById('logout-header-btn');
+        
+        // ADMIN CONTROLS
+        const adminControlsCard = document.getElementById('admin-controls-card');
+        const clearAllAlertsBtn = document.getElementById('clear-all-alerts-btn');
+        const resetStatsBtn = document.getElementById('reset-stats-btn');
+        
+        // NOTIFICATION ELEMENTS
+        const notificationStatusContainer = document.getElementById('notification-status-container');
+        const enableNotificationsBtn = document.getElementById('enable-notifications-btn');
+        const testNotificationBtn = document.getElementById('test-notification-btn');
         
         // TABLE ELEMENTS
         const searchGamersInput = document.getElementById('search-gamers');
@@ -1321,6 +1587,8 @@
                         };
                         showUserInterface();
                         showNotification('Welcome Back', `Welcome back, ${currentUser.gamerName}!`);
+                        updateNotificationStatus();
+                        updateAdminControls();
                     } else {
                         // User no longer exists, clear saved data
                         localStorage.removeItem('battleAlertCurrentUser');
@@ -1353,6 +1621,9 @@
             openLoginBtn.style.display = 'flex';
             openRegistrationBtn.style.display = 'flex';
             openSendAlertBtn.style.display = 'none';
+            adminControlsCard.style.display = 'none';
+            // Reset PIN attempts when showing guest interface
+            pinAttempts = 0;
         }
 
         function showUserInterface() {
@@ -1365,8 +1636,17 @@
             
             if (currentUser) {
                 currentUsername.textContent = currentUser.gamerName;
+                updateAdminControls();
                 // Load gamers again to update the table with current user logged in
                 loadGamers();
+            }
+        }
+
+        function updateAdminControls() {
+            if (currentUser) {
+                adminControlsCard.style.display = 'block';
+            } else {
+                adminControlsCard.style.display = 'none';
             }
         }
 
@@ -1401,6 +1681,11 @@
                         id: docSnapshot.id,
                         ...docSnapshot.data()
                     };
+                    
+                    // Don't include pinHash in the client-side object for security
+                    if (gamer.pinHash) {
+                        delete gamer.pinHash;
+                    }
                     
                     if (gamer.totalAlerts && gamer.totalAlerts > 0) {
                         gamer.avgResponseTime = gamer.totalResponseTime / gamer.totalAlerts;
@@ -1603,10 +1888,157 @@
             }
         }
 
-        // LOGIN FUNCTION
+        // PIN PROMPT FUNCTION
+        function showPinPrompt() {
+            return new Promise((resolve) => {
+                const pinModal = document.createElement('div');
+                pinModal.className = 'modal';
+                pinModal.style.display = 'flex';
+                pinModal.innerHTML = `
+                    <div class="modal-content" style="max-width: 320px;">
+                        <h2 class="modal-title"><i class="fas fa-lock"></i> Enter Your PIN</h2>
+                        <div style="text-align: center; padding: 20px;">
+                            <div style="font-size: 3rem; color: var(--primary-red); margin-bottom: 20px;">
+                                <i class="fas fa-user-lock"></i>
+                            </div>
+                            <p style="color: var(--medium-gray); margin-bottom: 20px;">
+                                Enter your 4-digit security PIN
+                            </p>
+                            
+                            <!-- PIN display -->
+                            <div style="margin-bottom: 25px;">
+                                <div id="pin-display" style="font-size: 2rem; letter-spacing: 15px; 
+                                      color: var(--white); margin-bottom: 10px;">
+                                    _ _ _ _
+                                </div>
+                                <div id="pin-error" style="color: var(--alert-red); font-size: 0.9rem; 
+                                      height: 20px; margin-top: 5px;"></div>
+                            </div>
+                            
+                            <!-- Number pad -->
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); 
+                                  gap: 10px; max-width: 200px; margin: 0 auto;">
+                                ${[1,2,3,4,5,6,7,8,9].map(num => `
+                                    <button class="pin-btn" data-number="${num}">
+                                        ${num}
+                                    </button>
+                                `).join('')}
+                                <div></div>
+                                <button class="pin-btn" data-number="0">
+                                    0
+                                </button>
+                                <button id="pin-backspace"
+                                    style="padding: 15px; font-size: 1.5rem; 
+                                           background: var(--alert-red); 
+                                           color: var(--white); border: none; 
+                                           border-radius: 50%; cursor: pointer;">
+                                    ←
+                                </button>
+                            </div>
+                            
+                            <div style="margin-top: 25px;">
+                                <button class="form-btn form-btn-secondary" id="cancel-pin">Cancel</button>
+                                <button class="form-btn form-btn-primary" id="submit-pin" disabled>
+                                    Enter
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(pinModal);
+                
+                let pinDigits = [];
+                const pinDisplay = document.getElementById('pin-display');
+                const submitBtn = document.getElementById('submit-pin');
+                const errorDisplay = document.getElementById('pin-error');
+                
+                function updateDisplay() {
+                    const displayArray = [];
+                    for (let i = 0; i < 4; i++) {
+                        displayArray.push(pinDigits[i] || '_');
+                    }
+                    pinDisplay.textContent = displayArray.join(' ');
+                    
+                    // Show submit button only when 4 digits entered
+                    submitBtn.disabled = pinDigits.length !== 4;
+                    
+                    // Clear any error
+                    errorDisplay.textContent = '';
+                }
+                
+                // Number pad buttons
+                document.querySelectorAll('.pin-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        if (pinDigits.length < 4) {
+                            pinDigits.push(e.target.getAttribute('data-number'));
+                            updateDisplay();
+                        }
+                    });
+                });
+                
+                // Backspace
+                document.getElementById('pin-backspace').addEventListener('click', () => {
+                    if (pinDigits.length > 0) {
+                        pinDigits.pop();
+                        updateDisplay();
+                    }
+                });
+                
+                // Cancel
+                document.getElementById('cancel-pin').addEventListener('click', () => {
+                    document.body.removeChild(pinModal);
+                    resolve(null);
+                });
+                
+                // Submit
+                document.getElementById('submit-pin').addEventListener('click', () => {
+                    if (pinDigits.length === 4) {
+                        const pin = pinDigits.join('');
+                        document.body.removeChild(pinModal);
+                        resolve(pin);
+                    }
+                });
+                
+                // Keyboard support
+                function handleKeydown(e) {
+                    if (e.key >= '0' && e.key <= '9' && pinDigits.length < 4) {
+                        pinDigits.push(e.key);
+                        updateDisplay();
+                    } else if (e.key === 'Backspace') {
+                        pinDigits.pop();
+                        updateDisplay();
+                    } else if (e.key === 'Enter' && pinDigits.length === 4) {
+                        const pin = pinDigits.join('');
+                        document.body.removeChild(pinModal);
+                        document.removeEventListener('keydown', handleKeydown);
+                        resolve(pin);
+                    }
+                }
+                
+                document.addEventListener('keydown', handleKeydown);
+                
+                // Close on background click
+                pinModal.addEventListener('click', (e) => {
+                    if (e.target === pinModal) {
+                        document.body.removeChild(pinModal);
+                        document.removeEventListener('keydown', handleKeydown);
+                        resolve(null);
+                    }
+                });
+            });
+        }
+
+        // LOGIN FUNCTION WITH PIN
         async function loginUser(gamerName) {
             if (!gamerName.trim()) {
                 showNotification('Error', 'Please enter a gamer name');
+                return false;
+            }
+            
+            // Check if too many attempts
+            if (pinAttempts >= MAX_PIN_ATTEMPTS) {
+                showNotification('Error', 'Too many failed attempts. Please try again later.');
                 return false;
             }
             
@@ -1620,15 +2052,43 @@
                 
                 if (querySnapshot.empty) {
                     loginError.style.display = 'block';
-                    showNotification('Error', `Gamer "${gamerName}" not found. Please check the name or register as a new user.`);
+                    showNotification('Error', `Gamer "${gamerName}" not found. Please check your name or register as a new user.`);
                     return false;
                 }
                 
                 const docSnapshot = querySnapshot.docs[0];
+                const gamerData = docSnapshot.data();
+                
+                // Always ask for PIN
+                const enteredPin = await showPinPrompt();
+                if (!enteredPin) {
+                    return false;
+                }
+                
+                // Verify the PIN against stored hash
+                const isValidPin = await verifyPin(enteredPin, gamerData.pinHash);
+                
+                if (!isValidPin) {
+                    pinAttempts++;
+                    const remainingAttempts = MAX_PIN_ATTEMPTS - pinAttempts;
+                    if (remainingAttempts > 0) {
+                        showNotification('Error', `Invalid PIN. ${remainingAttempts} attempt(s) remaining.`);
+                    } else {
+                        showNotification('Error', 'Too many failed attempts. Please try again later.');
+                    }
+                    return false;
+                }
+                
+                // Reset PIN attempts on successful login
+                pinAttempts = 0;
+                
                 currentUser = {
                     id: docSnapshot.id,
-                    ...docSnapshot.data()
+                    ...gamerData
                 };
+                
+                // Don't store pinHash in client-side object
+                delete currentUser.pinHash;
                 
                 // Save user to localStorage for auto-login
                 localStorage.setItem('battleAlertCurrentUser', JSON.stringify({
@@ -1640,6 +2100,8 @@
                 loginModal.style.display = 'none';
                 loginGamerNameInput.value = '';
                 loginError.style.display = 'none';
+                updateNotificationStatus();
+                updateAdminControls();
                 
                 showNotification('Success', `Welcome back, ${currentUser.gamerName}!`);
                 return true;
@@ -2015,6 +2477,131 @@
             });
         }
 
+        // CHANGE PIN FUNCTION
+        async function changePin(currentPin, newPin) {
+            try {
+                // Get fresh user data with pinHash
+                const userDoc = await getDocs(query(
+                    collection(db, 'members'),
+                    where('gamerName', '==', currentUser.gamerName)
+                ));
+                
+                if (userDoc.empty) {
+                    showNotification('Error', 'User not found');
+                    return false;
+                }
+                
+                const userData = userDoc.docs[0].data();
+                
+                // Verify current PIN
+                const isValidCurrentPin = await verifyPin(currentPin, userData.pinHash);
+                if (!isValidCurrentPin) {
+                    showNotification('Error', 'Current PIN is incorrect');
+                    return false;
+                }
+                
+                // Hash new PIN
+                const newPinHash = await hashPin(newPin);
+                
+                // Update in Firestore
+                const userRef = doc(db, 'members', currentUser.id);
+                await updateDoc(userRef, {
+                    pinHash: newPinHash
+                });
+                
+                return true;
+            } catch (error) {
+                console.error('Error changing PIN:', error);
+                return false;
+            }
+        }
+
+        // CLEAR MY ALERTS
+        async function clearMyAlerts() {
+            if (!currentUser) return;
+            
+            try {
+                const q = query(
+                    collection(db, 'alerts'),
+                    where('recipientId', '==', currentUser.id)
+                );
+                
+                const querySnapshot = await getDocs(q);
+                const batch = writeBatch(db);
+                
+                querySnapshot.forEach((doc) => {
+                    batch.delete(doc.ref);
+                });
+                
+                await batch.commit();
+                
+                const userRef = doc(db, 'members', currentUser.id);
+                await updateDoc(userRef, {
+                    totalAlerts: 0,
+                    totalResponseTime: 0,
+                    status: 'safe'
+                });
+                
+                showNotification('Success', 'Your alerts have been cleared!');
+            } catch (error) {
+                console.error('Error clearing alerts:', error);
+                showNotification('Error', 'Failed to clear alerts');
+            }
+        }
+
+        // CLEAR ALL ALERTS
+        async function clearAllAlertLogs() {
+            try {
+                const querySnapshot = await getDocs(collection(db, 'alerts'));
+                const batch = writeBatch(db);
+                
+                querySnapshot.forEach((doc) => {
+                    batch.delete(doc.ref);
+                });
+                
+                await batch.commit();
+                
+                showNotification('Success', 'All alert logs have been cleared!');
+            } catch (error) {
+                console.error('Error clearing all alerts:', error);
+                showNotification('Error', 'Failed to clear alert logs');
+            }
+        }
+
+        // RESET STATISTICS
+        async function resetStatistics() {
+            try {
+                const alertsSnapshot = await getDocs(collection(db, 'alerts'));
+                const batch = writeBatch(db);
+                
+                alertsSnapshot.forEach((doc) => {
+                    batch.delete(doc.ref);
+                });
+                
+                await batch.commit();
+                
+                const gamersSnapshot = await getDocs(collection(db, 'members'));
+                const updateBatch = writeBatch(db);
+                
+                gamersSnapshot.forEach((doc) => {
+                    const gamerRef = doc.ref;
+                    updateBatch.update(gamerRef, {
+                        totalAlerts: 0,
+                        totalResponseTime: 0,
+                        status: 'safe',
+                        lastAlert: null
+                    });
+                });
+                
+                await updateBatch.commit();
+                
+                showNotification('Success', 'All statistics have been reset!');
+            } catch (error) {
+                console.error('Error resetting statistics:', error);
+                showNotification('Error', 'Failed to reset statistics');
+            }
+        }
+
         // LOGOUT
         function logout() {
             currentUser = null;
@@ -2089,6 +2676,9 @@
             specificGamerSelect.innerHTML = '<option value="">Select a gamer</option>';
             
             gamers.forEach(gamer => {
+                // Don't show current user in the list (can't send alert to yourself)
+                if (currentUser && gamer.id === currentUser.id) return;
+                
                 const option = document.createElement('option');
                 option.value = gamer.id;
                 option.textContent = `${gamer.gamerName} (${gamer.alliance})`;
@@ -2201,9 +2791,162 @@
                     return;
                 }
 
+                const { getMessaging, onMessage, isSupported } = await import(
+                    "https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging.js"
+                );
+
+                const isMessagingSupported = await isSupported();
+                if (!isMessagingSupported) {
+                    console.log('FCM not supported in this browser');
+                    return;
+                }
+
+                messagingInstance = getMessaging(app);
+
+                onMessage(messagingInstance, (payload) => {
+                    console.log('Message received:', payload);
+                    if (payload.notification) {
+                        showNotification(
+                            payload.notification.title || 'Battle Alert',
+                            payload.notification.body || 'New alert received'
+                        );
+                        
+                        checkForActiveAlerts();
+                    }
+                });
+
+                console.log('Push notifications initialized');
                 updateNotificationStatus();
             } catch (error) {
                 console.error('Error initializing push notifications:', error);
+            }
+        }
+
+        async function requestNotificationPermission() {
+            try {
+                if (Notification.permission === 'granted') {
+                    await registerFCMToken();
+                    updateNotificationStatus();
+                    showNotification('Success', 'Notifications are already enabled!');
+                    return;
+                }
+
+                const userConsent = confirm(
+                    'Battle Alert needs permission to send you notifications.\n\n' +
+                    '✓ Get instant alerts when help is needed\n' +
+                    '✓ Receive notifications even when the app is closed\n' +
+                    '✓ Works on both mobile and desktop devices\n\n' +
+                    'Click OK to enable notifications.'
+                );
+
+                if (!userConsent) {
+                    showNotification('Info', 'Notification request cancelled');
+                    return;
+                }
+
+                const permission = await Notification.requestPermission();
+
+                if (permission === 'granted') {
+                    showNotification('Success', 'Notifications enabled successfully!');
+                    await registerFCMToken();
+                    updateNotificationStatus();
+
+                    setTimeout(() => {
+                        new Notification('Battle Alert', {
+                            body: 'Notifications are now enabled! You will receive battle alerts.',
+                            icon: 'https://cdn-icons-png.flaticon.com/512/1077/1077976.png'
+                        });
+                    }, 1000);
+                } else if (permission === 'denied') {
+                    showNotification('Blocked', 'Notifications were blocked. Enable them in browser settings.');
+                    updateNotificationStatus();
+                } else {
+                    showNotification('Info', 'Notification permission not granted');
+                }
+            } catch (error) {
+                console.error('Error requesting notification permission:', error);
+                showNotification('Error', 'Failed to enable notifications');
+            }
+        }
+
+        async function registerFCMToken() {
+            try {
+                if (!messagingInstance) return;
+
+                const { getToken } = await import(
+                    "https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging.js"
+                );
+
+                const vapidKey = "BEwiF4gZjQM5OC8-G-NeTUh2Fadlr4f1w0VqRnhALtP-_RfQ4ewBYpscBEzyLSDi94yi5ixi3epQhsfKzd4-ghY";
+                const fcmToken = await getToken(messagingInstance, { vapidKey });
+
+                if (fcmToken) {
+                    console.log('FCM Token obtained:', fcmToken);
+                    localStorage.setItem('battleAlertFCMToken', fcmToken);
+                    
+                    if (currentUser) {
+                        const userRef = doc(db, 'members', currentUser.id);
+                        await updateDoc(userRef, {
+                            fcmToken: fcmToken,
+                            lastSeen: serverTimestamp()
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Error getting FCM token:', error);
+            }
+        }
+
+        function testNotification() {
+            if (Notification.permission !== 'granted') {
+                showNotification('Error', 'Notifications are not enabled. Please enable them first.');
+                return;
+            }
+
+            showNotification('Test Notification', 'This is a test notification from Battle Alert!');
+
+            try {
+                new Notification('Battle Alert - Test', {
+                    body: 'Your notifications are working correctly!',
+                    icon: 'https://cdn-icons-png.flaticon.com/512/1077/1077976.png'
+                });
+            } catch (e) {
+                console.error('Browser notification test failed:', e);
+            }
+        }
+
+        function updateNotificationStatus() {
+            if (!notificationStatusContainer) return;
+
+            const permission = Notification.permission;
+
+            if (permission === 'granted') {
+                notificationStatusContainer.innerHTML = `
+                    <div class="notification-status-box notification-enabled">
+                        <p><i class="fas fa-check-circle" style="color: #4caf50;"></i> <strong>Notifications Enabled ✓</strong></p>
+                        <p style="font-size: 0.9rem; margin-top: 5px;">You will receive alerts on all your devices</p>
+                    </div>
+                `;
+                enableNotificationsBtn.style.display = 'none';
+                testNotificationBtn.style.display = 'block';
+            } else if (permission === 'denied') {
+                notificationStatusContainer.innerHTML = `
+                    <div class="notification-status-box notification-denied">
+                        <p><i class="fas fa-ban" style="color: #f44336;"></i> <strong>Notifications Blocked ✗</strong></p>
+                        <p style="font-size: 0.9rem; margin-top: 5px;">Enable notifications in your browser settings</p>
+                    </div>
+                `;
+                enableNotificationsBtn.style.display = 'none';
+                testNotificationBtn.style.display = 'none';
+            } else {
+                notificationStatusContainer.innerHTML = `
+                    <div class="notification-status-box notification-default">
+                        <p><i class="fas fa-bell-slash" style="color: #2196f3;"></i> <strong>Notifications Not Set Up</strong></p>
+                        <p style="font-size: 0.9rem; margin-top: 5px;">Enable notifications to receive instant battle alerts</p>
+                    </div>
+                `;
+                enableNotificationsBtn.style.display = 'block';
+                testNotificationBtn.style.display = 'none';
             }
         }
 
@@ -2214,13 +2957,6 @@
             setTimeout(() => {
                 notificationElement.style.display = 'none';
             }, 5000);
-        }
-
-        function updateNotificationStatus() {
-            // Simple notification status update
-            const permission = Notification.permission;
-            
-            // You can add notification permission request later if needed
         }
 
         // SETUP EVENT LISTENERS
@@ -2282,6 +3018,7 @@
                 registrationForm.reset();
                 customAllianceGroup.style.display = 'none';
                 nameError.style.display = 'none';
+                pinError.style.display = 'none';
             });
 
             registrationModal.addEventListener('click', (e) => {
@@ -2290,6 +3027,7 @@
                     registrationForm.reset();
                     customAllianceGroup.style.display = 'none';
                     nameError.style.display = 'none';
+                    pinError.style.display = 'none';
                 }
             });
 
@@ -2301,13 +3039,29 @@
                 }
             });
 
-            // Registration form submit with duplicate check
+            // Registration form submit with PIN validation
             registrationForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
 
                 const gamerName = document.getElementById('gamer-name').value.trim();
+                const pin = document.getElementById('gamer-pin').value;
+                const confirmPin = document.getElementById('confirm-pin').value;
                 const alliance = document.getElementById('alliance-name').value;
                 const customAlliance = document.getElementById('custom-alliance').value.trim();
+
+                // Validate PIN
+                if (!pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+                    showNotification('Error', 'Please enter a valid 4-digit PIN');
+                    return;
+                }
+                
+                if (pin !== confirmPin) {
+                    pinError.style.display = 'block';
+                    showNotification('Error', 'PINs do not match');
+                    return;
+                }
+                
+                pinError.style.display = 'none';
 
                 if (!gamerName) {
                     showNotification('Error', 'Please enter a gamer name');
@@ -2334,9 +3088,13 @@
                 }
 
                 try {
+                    // Hash the PIN before storing
+                    const pinHash = await hashPin(pin);
+                    
                     const docRef = await addDoc(collection(db, 'members'), {
                         gamerName: gamerName,
                         alliance: finalAlliance,
+                        pinHash: pinHash, // Store only the hash, not the actual PIN
                         joinDate: serverTimestamp(),
                         status: 'safe',
                         lastAlert: null,
@@ -2361,6 +3119,8 @@
                     showUserInterface();
                     registrationForm.reset();
                     customAllianceGroup.style.display = 'none';
+                    updateNotificationStatus();
+                    updateAdminControls();
                     
                     setTimeout(() => {
                         registrationModal.style.display = 'none';
@@ -2484,6 +3244,7 @@
             recipientSelect.addEventListener('change', (e) => {
                 if (e.target.value === 'specific') {
                     specificGamerGroup.style.display = 'block';
+                    populateSpecificGamerSelect(allGamers);
                 } else {
                     specificGamerGroup.style.display = 'none';
                 }
@@ -2506,9 +3267,9 @@
                     let recipients = [];
                     
                     if (recipientType === 'all') {
-                        recipients = allGamers;
+                        recipients = allGamers.filter(g => g.id !== currentUser.id); // Don't send to self
                     } else if (recipientType === 'alliance') {
-                        recipients = allGamers.filter(g => g.alliance === currentUser.alliance);
+                        recipients = allGamers.filter(g => g.alliance === currentUser.alliance && g.id !== currentUser.id);
                     } else if (recipientType === 'specific') {
                         if (!specificGamerId) {
                             showNotification('Error', 'Please select a gamer');
@@ -2516,6 +3277,11 @@
                         }
                         const gamer = allGamers.find(g => g.id === specificGamerId);
                         if (gamer) recipients = [gamer];
+                    }
+
+                    if (recipients.length === 0) {
+                        showNotification('Error', 'No recipients found');
+                        return;
                     }
 
                     for (const recipient of recipients) {
@@ -2637,6 +3403,69 @@
                 await sendQuickAlert(quickAlertGamer.id, quickAlertGamer.name);
             });
 
+            // Change PIN
+            changePinBtn.addEventListener('click', () => {
+                if (!currentUser) return;
+                changePinModal.style.display = 'flex';
+            });
+
+            cancelPinChangeBtn.addEventListener('click', () => {
+                changePinModal.style.display = 'none';
+                document.getElementById('current-pin').value = '';
+                document.getElementById('new-pin').value = '';
+                document.getElementById('confirm-new-pin').value = '';
+                newPinError.style.display = 'none';
+            });
+
+            changePinModal.addEventListener('click', (e) => {
+                if (e.target === changePinModal) {
+                    changePinModal.style.display = 'none';
+                    document.getElementById('current-pin').value = '';
+                    document.getElementById('new-pin').value = '';
+                    document.getElementById('confirm-new-pin').value = '';
+                    newPinError.style.display = 'none';
+                }
+            });
+
+            submitPinChangeBtn.addEventListener('click', async () => {
+                const currentPin = document.getElementById('current-pin').value;
+                const newPin = document.getElementById('new-pin').value;
+                const confirmNewPin = document.getElementById('confirm-new-pin').value;
+
+                // Validate new PIN
+                if (!newPin || newPin.length !== 4 || !/^\d{4}$/.test(newPin)) {
+                    showNotification('Error', 'Please enter a valid 4-digit new PIN');
+                    return;
+                }
+                
+                if (newPin !== confirmNewPin) {
+                    newPinError.style.display = 'block';
+                    showNotification('Error', 'New PINs do not match');
+                    return;
+                }
+                
+                newPinError.style.display = 'none';
+
+                const success = await changePin(currentPin, newPin);
+                if (success) {
+                    showNotification('Success', 'PIN changed successfully!');
+                    changePinModal.style.display = 'none';
+                    document.getElementById('current-pin').value = '';
+                    document.getElementById('new-pin').value = '';
+                    document.getElementById('confirm-new-pin').value = '';
+                } else {
+                    showNotification('Error', 'Failed to change PIN');
+                }
+            });
+
+            // Clear my alerts
+            clearMyAlertsBtn.addEventListener('click', async () => {
+                profileDropdownMenu.classList.remove('show');
+                if (confirm('Are you sure you want to clear all your alerts? This cannot be undone.')) {
+                    await clearMyAlerts();
+                }
+            });
+
             // Profile dropdown
             profileBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -2662,6 +3491,67 @@
                 logout();
             });
 
+            // Admin controls
+            clearAllAlertsBtn.addEventListener('click', () => {
+                clearAlertsModal.style.display = 'flex';
+            });
+
+            resetStatsBtn.addEventListener('click', () => {
+                resetStatsModal.style.display = 'flex';
+            });
+
+            // Clear alerts modal
+            cancelClearAlertsBtn.addEventListener('click', () => {
+                clearAlertsModal.style.display = 'none';
+                confirmClearCheckbox.checked = false;
+                confirmClearAlertsBtn.disabled = true;
+            });
+
+            clearAlertsModal.addEventListener('click', (e) => {
+                if (e.target === clearAlertsModal) {
+                    clearAlertsModal.style.display = 'none';
+                    confirmClearCheckbox.checked = false;
+                    confirmClearAlertsBtn.disabled = true;
+                }
+            });
+
+            confirmClearCheckbox.addEventListener('change', () => {
+                confirmClearAlertsBtn.disabled = !confirmClearCheckbox.checked;
+            });
+
+            confirmClearAlertsBtn.addEventListener('click', async () => {
+                await clearAllAlertLogs();
+                clearAlertsModal.style.display = 'none';
+                confirmClearCheckbox.checked = false;
+                confirmClearAlertsBtn.disabled = true;
+            });
+
+            // Reset stats modal
+            cancelResetStatsBtn.addEventListener('click', () => {
+                resetStatsModal.style.display = 'none';
+                confirmResetCheckbox.checked = false;
+                confirmResetStatsBtn.disabled = true;
+            });
+
+            resetStatsModal.addEventListener('click', (e) => {
+                if (e.target === resetStatsModal) {
+                    resetStatsModal.style.display = 'none';
+                    confirmResetCheckbox.checked = false;
+                    confirmResetStatsBtn.disabled = true;
+                }
+            });
+
+            confirmResetCheckbox.addEventListener('change', () => {
+                confirmResetStatsBtn.disabled = !confirmResetCheckbox.checked;
+            });
+
+            confirmResetStatsBtn.addEventListener('click', async () => {
+                await resetStatistics();
+                resetStatsModal.style.display = 'none';
+                confirmResetCheckbox.checked = false;
+                confirmResetStatsBtn.disabled = true;
+            });
+
             // Search and filter
             searchGamersInput.addEventListener('input', filterAndSortGamers);
             filterAllianceSelect.addEventListener('change', filterAndSortGamers);
@@ -2685,13 +3575,10 @@
                     filterAndSortGamers();
                 });
             });
-        }
 
-        // Update current user display
-        function updateCurrentUserDisplay() {
-            if (currentUser) {
-                currentUsername.textContent = currentUser.gamerName;
-            }
+            // Notifications
+            enableNotificationsBtn.addEventListener('click', requestNotificationPermission);
+            testNotificationBtn.addEventListener('click', testNotification);
         }
     </script>
 </body>
