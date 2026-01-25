@@ -1814,17 +1814,18 @@
                 });
                 
                 if (fcmToken) {
-                    console.log('FCM Token obtained:', fcmToken);
-                    localStorage.setItem('battleAlertFCMToken', fcmToken);
-                    
-                    if (currentUser) {
-                        const userRef = doc(db, 'members', currentUser.id);
-                        await updateDoc(userRef, {
-                            fcmToken: fcmToken,
-                            lastSeen: serverTimestamp()
-                        });
-                    }
-                }
+    console.log('FCM Token obtained:', fcmToken);
+    localStorage.setItem('battleAlertFCMToken', fcmToken);
+    
+    // UNCOMMENT THIS - It saves tokens to Firestore!
+    if (currentUser) {
+        const userRef = doc(db, 'members', currentUser.id);
+        await updateDoc(userRef, {
+            fcmToken: fcmToken,
+            lastSeen: serverTimestamp()
+        });
+    }
+}
             } catch (error) {
                 console.error('Error getting FCM token:', error);
                 
@@ -2490,7 +2491,14 @@
                     id: docSnapshot.id,
                     ...gamerData
                 };
-                
+                const savedToken = localStorage.getItem('battleAlertFCMToken');
+    if (savedToken) {
+        const userRef = doc(db, 'members', currentUser.id);
+        await updateDoc(userRef, {
+            fcmToken: savedToken,
+            lastSeen: serverTimestamp()
+        });
+    }
                 delete currentUser.pinHash;
                 
                 localStorage.setItem('battleAlertCurrentUser', JSON.stringify({
