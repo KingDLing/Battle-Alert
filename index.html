@@ -1699,10 +1699,8 @@
                 await registration.unregister();
             }
             
-            // Register new service worker
-            serviceWorkerRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
-                scope: '/'
-            });
+            // Register new service worker - use relative path
+            serviceWorkerRegistration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
             
             console.log('✅ Service Worker registered:', serviceWorkerRegistration.scope);
             
@@ -1718,7 +1716,6 @@
     }
     return null;
 }
-
         async function initializePushNotifications() {
     try {
         // Check basic support
