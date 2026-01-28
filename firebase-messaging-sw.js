@@ -1,22 +1,25 @@
 // firebase-messaging-sw.js
-importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js');
+importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging.js');
 
-
-firebase.initializeApp({
+const firebaseConfig = {
     apiKey: "AIzaSyBVnI6XN0eL6gKelJuVbYejmhlmYSl89RI",
-    authDomain: "battle-alert-9db25.firebaseapp.com",
+    authDomain: "battle-alert-9db25.firebasestorage.app",
     projectId: "battle-alert-9db25",
     storageBucket: "battle-alert-9db25.firebasestorage.app",
     messagingSenderId: "485179486012",
     appId: "1:485179486012:web:fa2c712e452ad2dff03839"
-});
+};
 
+firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
+
+// IMPORTANT: Log for debugging
+console.log('[SW] Firebase Messaging initialized');
 
 // Background message handler
 messaging.onBackgroundMessage((payload) => {
-    console.log('[firebase-messaging-sw.js] Background message:', payload);
+    console.log('[SW] Received background message:', payload);
     
     const notificationTitle = payload.notification?.title || '🚨 Battle Alert';
     const notificationOptions = {
@@ -25,7 +28,13 @@ messaging.onBackgroundMessage((payload) => {
         badge: 'https://cdn-icons-png.flaticon.com/512/1077/1077976.png',
         tag: 'battle-alert-' + Date.now(),
         requireInteraction: true,
-        data: payload.data || {}
+        data: payload.data || {},
+        actions: [
+            {
+                action: 'open',
+                title: 'Open App'
+            }
+        ]
     };
     
     return self.registration.showNotification(notificationTitle, notificationOptions);
@@ -33,24 +42,25 @@ messaging.onBackgroundMessage((payload) => {
 
 // Handle notification clicks
 self.addEventListener('notificationclick', (event) => {
-    console.log('Notification clicked:', event.notification);
+    console.log('[SW] Notification clicked:', event.notification);
     event.notification.close();
     
-    if (event.action === 'open' || !event.action) {
-        event.waitUntil(
-            clients.matchAll({ type: 'window', includeUncontrolled: true })
-            .then((clientList) => {
-                // Check if there's already a window open
-                for (const client of clientList) {
-                    if (client.url.includes('battle') && 'focus' in client) {
-                        return client.focus();
-                    }
+    // This looks for open windows and focuses one, or opens a new one
+    event.waitUntil(
+        clients.matchAll({
+            type: 'window',
+            includeUncontrolled: true
+        }).then((clientList) => {
+            // Check if there's already a window open
+            for (const client of clientList) {
+                if (client.url.includes('/') && 'focus' in client) {
+                    return client.focus();
                 }
-                // If not, open a new window
-                if (clients.openWindow) {
-                    return clients.openWindow('/');
-                }
-            })
-        );
-    }
+            }
+            // If not, open a new window
+            if (clients.openWindow) {
+                return clients.openWindow('/');
+            }
+        })
+    );
 });
