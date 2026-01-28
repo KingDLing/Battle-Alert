@@ -1840,43 +1840,79 @@
         }
 
         async function requestNotificationPermission() {
-            try {
-                const deviceInfo = detectDeviceInfo();
-                
-                if (deviceInfo.isIOS && deviceInfo.isSafari) {
-                    const iosMessage = `iOS Safari requires additional setup:
-                        1. Tap the Share button
-                        2. Scroll down and tap "Add to Home Screen"
-                        3. Open the app from your Home Screen
-                        4. Enable notifications when prompted`;
-                    
-                    if (confirm(iosMessage + '\n\nWould you like to continue?')) {
-                        const permission = await Notification.requestPermission();
-                        handlePermissionResult(permission);
-                    }
-                    return;
-                }
-                
-                const userConsent = confirm(
-                    'Battle Alert needs permission to send you notifications.\n\n' +
-                    '✓ Get instant alerts when help is needed\n' +
-                    '✓ Receive notifications even when the app is closed\n' +
-                    '✓ Works on both mobile and desktop devices\n\n' +
-                    'Click OK to enable notifications.'
-                );
-
-                if (!userConsent) {
-                    showNotification('Info', 'Notification request cancelled');
-                    return;
-                }
-
-                const permission = await Notification.requestPermission();
-                handlePermissionResult(permission);
-                
-            } catch (error) {
-                showNotification('Error', 'Failed to enable notifications');
-            }
+    try {
+        // First check current permission
+        if (Notification.permission === 'granted') {
+            showNotification('Already Enabled', 'Notifications are already enabled!');
+            enableExistingNotifications();
+            return;
         }
+        
+        if (Notification.permission === 'denied') {
+            showNotification('Blocked', 'Notifications were previously blocked. Please enable them in browser settings.');
+            
+            // Provide helpful instructions based on device
+            const deviceInfo = detectDeviceInfo();
+            let instructions = '';
+            
+            if (deviceInfo.isIOS) {
+                instructions = 'iOS: Settings > Safari > Notifications > Allow for this website';
+            } else if (deviceInfo.isMobile) {
+                instructions = 'Mobile: Tap menu (⋮) > Settings > Site settings > Notifications > Allow';
+            } else {
+                instructions = 'Desktop: Click the lock icon in address bar > Site settings > Notifications > Allow';
+            }
+            
+            if (confirm(`Notifications blocked. ${instructions}\n\nOpen browser settings?`)) {
+                // Can't directly open settings, but we can guide them
+                showNotification('Settings Help', instructions);
+            }
+            return;
+        }
+        
+        // Default state - request permission directly
+        console.log("Requesting notification permission...");
+        
+        const permission = await Notification.requestPermission();
+        
+        if (permission === 'granted') {
+            notificationsEnabled = true;
+            saveNotificationSettings();
+            showNotification('Success', 'Notifications enabled successfully!');
+            
+            // Get and store FCM token
+            await getAndStoreFCMToken();
+            updateNotificationStatus();
+            
+            // Show test notification
+            setTimeout(() => {
+                if (notificationsEnabled) {
+                    try {
+                        new Notification('Battle Alert', {
+                            body: 'Notifications are now enabled! You will receive instant battle alerts.',
+                            icon: 'https://cdn-icons-png.flaticon.com/512/1077/1077976.png',
+                            badge: 'https://cdn-icons-png.flaticon.com/512/1077/1077976.png'
+                        });
+                    } catch (e) {}
+                }
+            }, 1000);
+            
+        } else if (permission === 'denied') {
+            notificationsEnabled = false;
+            saveNotificationSettings();
+            showNotification('Blocked', 'Notifications were blocked.');
+            updateNotificationStatus();
+        } else {
+            notificationsEnabled = false;
+            saveNotificationSettings();
+            showNotification('Info', 'Notification permission not granted.');
+        }
+        
+    } catch (error) {
+        console.error('Error requesting notification permission:', error);
+        showNotification('Error', 'Failed to enable notifications');
+    }
+}
         
         async function handlePermissionResult(permission) {
             if (permission === 'granted') {
