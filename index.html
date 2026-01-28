@@ -2306,18 +2306,23 @@
         }
 
         async function checkGamerNameExists(gamerName) {
-            try {
-                const q = query(
-                    collection(db, 'members'),
-                    where('gamerName', '==', gamerName)
-                );
-                const querySnapshot = await getDocs(q);
-                return !querySnapshot.empty;
-            } catch (error) {
-                console.error('Error checking gamer name:', error);
-                return false;
-            }
-        }
+    try {
+        // First check the already-loaded allGamers array
+        const existsInArray = allGamers.some(g => g.gamerName.toLowerCase() === gamerName.toLowerCase());
+        if (existsInArray) return true;
+        
+        // If not found, query Firestore as backup
+        const q = query(
+            collection(db, 'members'),
+            where('gamerName', '==', gamerName)
+        );
+        const querySnapshot = await getDocs(q);
+        return !querySnapshot.empty;
+    } catch (error) {
+        console.error('Error checking gamer name:', error);
+        return false;
+    }
+}
 
         function showPinPrompt() {
             return new Promise((resolve) => {
