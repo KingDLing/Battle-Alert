@@ -1,56 +1,3738 @@
-// firebase-messaging-sw.js
-importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js');
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Battle Alert - Universal Notification System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-red: #d32f2f;
+            --dark-red: #b71c1c;
+            --light-red: #ff6659;
+            --black: #212121;
+            --dark-gray: #424242;
+            --medium-gray: #757575;
+            --light-gray: #f5f5f5;
+            --white: #ffffff;
+            --alert-red: #ff3d00;
+            --success-green: #4caf50;
+            --warning-orange: #ff9800;
+            --info-blue: #2196f3;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: var(--black);
+            color: var(--white);
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background-color: var(--primary-red);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .logo-icon {
+            font-size: 2.5rem;
+            color: var(--white);
+        }
+        
+        .logo-text h1 {
+            font-size: 2.2rem;
+            color: var(--white);
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .logo-text p {
+            color: var(--light-gray);
+            font-size: 0.9rem;
+        }
+        
+        .header-controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .register-btn, .send-alert-btn, .login-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .register-btn {
+            background-color: var(--white);
+            color: var(--primary-red);
+        }
+        
+        .register-btn:hover {
+            background-color: var(--light-gray);
+        }
+        
+        .send-alert-btn {
+            background-color: var(--alert-red);
+            color: var(--white);
+        }
+        
+        .send-alert-btn:hover {
+            background-color: var(--dark-red);
+        }
+        
+        .login-btn {
+            background-color: var(--info-blue);
+            color: var(--white);
+        }
+        
+        .login-btn:hover {
+            background-color: #1976d2;
+        }
+        
+        .card {
+            background-color: var(--dark-gray);
+            border-radius: 8px;
+            padding: 25px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            margin-bottom: 20px;
+        }
+        
+        .card-title {
+            color: var(--white);
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--primary-red);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .card-title i {
+            color: var(--primary-red);
+        }
+        
+        .alert-btn {
+            padding: 15px;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+        }
+        
+        .alert-btn-primary {
+            background-color: var(--primary-red);
+            color: var(--white);
+        }
+        
+        .alert-btn-primary:hover {
+            background-color: var(--dark-red);
+        }
+        
+        .alert-btn-success {
+            background-color: var(--success-green);
+            color: var(--white);
+        }
+        
+        .alert-btn-success:hover {
+            background-color: #388e3c;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background-color: var(--dark-gray);
+            padding: 30px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+        }
+        
+        .modal-title {
+            color: var(--white);
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--primary-red);
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            color: var(--white);
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--medium-gray);
+            border-radius: 4px;
+            background-color: var(--light-gray);
+            color: var(--black);
+            font-size: 1rem;
+        }
+        
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 25px;
+        }
+        
+        .form-btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .form-btn-primary {
+            background-color: var(--primary-red);
+            color: var(--white);
+        }
+        
+        .form-btn-primary:hover {
+            background-color: var(--dark-red);
+        }
+        
+        .form-btn-secondary {
+            background-color: var(--medium-gray);
+            color: var(--white);
+        }
+        
+        .form-btn-secondary:hover {
+            background-color: #5d5d5d;
+        }
+        
+        .form-btn-danger {
+            background-color: var(--alert-red);
+            color: var(--white);
+        }
+        
+        .form-btn-danger:hover {
+            background-color: var(--dark-red);
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 4px;
+            background-color: var(--primary-red);
+            color: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 3000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .notification-status-box {
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        
+        .notification-enabled {
+            background-color: rgba(76, 175, 80, 0.2);
+            border-left: 4px solid #4caf50;
+        }
+        
+        .notification-denied {
+            background-color: rgba(244, 67, 54, 0.2);
+            border-left: 4px solid #f44336;
+        }
+        
+        .notification-default {
+            background-color: rgba(33, 150, 243, 0.2);
+            border-left: 4px solid #2196f3;
+        }
+        
+        .search-filter-container {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+        }
+        
+        .search-box input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--medium-gray);
+            border-radius: 4px;
+            background-color: var(--light-gray);
+            color: var(--black);
+            font-size: 1rem;
+        }
+        
+        .filter-box select {
+            padding: 12px;
+            border: 1px solid var(--medium-gray);
+            border-radius: 4px;
+            background-color: var(--light-gray);
+            color: var(--black);
+            font-size: 1rem;
+            min-width: 180px;
+        }
+        
+        .gamers-table-container {
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+        
+        .gamers-table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: var(--black);
+        }
+        
+        .gamers-table th {
+            background-color: var(--primary-red);
+            color: var(--white);
+            padding: 15px;
+            text-align: left;
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .gamers-table th:hover {
+            background-color: var(--dark-red);
+        }
+        
+        .gamers-table th i {
+            margin-left: 5px;
+            font-size: 0.8rem;
+        }
+        
+        .gamers-table td {
+            padding: 15px;
+            border-bottom: 1px solid var(--medium-gray);
+        }
+        
+        .gamers-table tr:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .action-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.3s;
+        }
+        
+        .edit-btn {
+            background-color: var(--info-blue);
+            color: var(--white);
+        }
+        
+        .edit-btn:hover {
+            background-color: #1976d2;
+        }
+        
+        .alert-btn-small {
+            background-color: var(--alert-red);
+            color: var(--white);
+        }
+        
+        .alert-btn-small:hover {
+            background-color: var(--dark-red);
+        }
+        
+        .got-it-btn {
+            background-color: var(--success-green);
+            color: var(--white);
+        }
+        
+        .got-it-btn:hover {
+            background-color: #388e3c;
+        }
+        
+        .vote-btn {
+            background-color: var(--warning-orange);
+            color: var(--white);
+        }
+        
+        .vote-btn:hover {
+            background-color: #f57c00;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-safe {
+            background-color: var(--success-green);
+        }
+        
+        .status-attacked {
+            background-color: var(--alert-red);
+        }
+        
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background-color: var(--dark-gray);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .stat-title {
+            color: var(--medium-gray);
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+        
+        .stat-value {
+            color: var(--white);
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        
+        .stat-subtext {
+            color: var(--medium-gray);
+            font-size: 0.8rem;
+            margin-top: 5px;
+        }
+        
+        .alert-log-container {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 15px;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+            padding: 10px;
+        }
+        
+        .alert-log-item {
+            padding: 10px;
+            border-bottom: 1px solid var(--medium-gray);
+            font-size: 0.9rem;
+        }
+        
+        .alert-log-item:last-child {
+            border-bottom: none;
+        }
+        
+        .alert-log-type {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+        
+        .alert-log-type-attack {
+            background-color: rgba(255, 61, 0, 0.2);
+            color: var(--alert-red);
+        }
+        
+        .alert-log-type-reinforce {
+            background-color: rgba(33, 150, 243, 0.2);
+            color: var(--info-blue);
+        }
+        
+        .alert-log-time {
+            color: var(--medium-gray);
+            font-size: 0.8rem;
+            float: right;
+        }
+        
+        .alert-log-sender {
+            font-weight: bold;
+            color: var(--light-red);
+        }
+        
+        .alert-log-recipient {
+            font-weight: bold;
+            color: var(--info-blue);
+        }
+        
+        .vote-reason {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: rgba(255, 61, 0, 0.1);
+            border-radius: 4px;
+            border-left: 3px solid var(--alert-red);
+        }
+        
+        .vote-reason textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--medium-gray);
+            border-radius: 4px;
+            background-color: var(--light-gray);
+            color: var(--black);
+            font-size: 0.9rem;
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .current-votes {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+        }
+        
+        .vote-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid var(--medium-gray);
+        }
+        
+        .vote-item:last-child {
+            border-bottom: none;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            margin-top: 30px;
+            color: var(--medium-gray);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--medium-gray);
+        }
+        
+        .current-user {
+            margin-left: auto;
+            margin-right: 15px;
+            color: var(--light-gray);
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .profile-dropdown {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        
+        .profile-btn {
+            background: transparent;
+            border: 1px solid var(--white);
+            color: var(--white);
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .profile-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background-color: var(--dark-gray);
+            border-radius: 4px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            min-width: 200px;
+            display: none;
+            z-index: 1000;
+            margin-top: 5px;
+        }
+        
+        .dropdown-menu.show {
+            display: block;
+        }
+        
+        .dropdown-item {
+            padding: 12px 15px;
+            color: var(--white);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--medium-gray);
+        }
+        
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+        
+        .dropdown-item:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .dropdown-item.danger {
+            color: var(--alert-red);
+        }
+        
+        .dropdown-item.danger:hover {
+            background-color: rgba(255, 61, 0, 0.1);
+        }
+        
+        .quick-action-buttons {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        
+        .quick-action-btn {
+            padding: 6px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+        
+        .quick-attack-btn {
+            background-color: var(--alert-red);
+            color: white;
+        }
+        
+        .quick-attack-btn:hover {
+            background-color: var(--dark-red);
+        }
+        
+        .quick-reinforce-btn {
+            background-color: var(--info-blue);
+            color: white;
+        }
+        
+        .quick-reinforce-btn:hover {
+            background-color: #1976d2;
+        }
+        
+        .gamer-name-cell {
+            cursor: pointer;
+            color: var(--light-red);
+            font-weight: bold;
+        }
+        
+        .gamer-name-cell:hover {
+            text-decoration: underline;
+        }
+        
+        .admin-controls {
+            background-color: rgba(255, 152, 0, 0.1);
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+            border-left: 4px solid var(--warning-orange);
+        }
+        
+        .admin-controls h4 {
+            color: var(--warning-orange);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .clear-alerts-btn {
+            background-color: var(--medium-gray);
+            color: white;
+            margin-top: 10px;
+        }
+        
+        .clear-alerts-btn:hover {
+            background-color: #5d5d5d;
+        }
+        
+        .logout-btn {
+            background-color: transparent;
+            border: 1px solid var(--white);
+            color: var(--white);
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        
+        .logout-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .login-form-container {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .login-instructions {
+            background-color: rgba(33, 150, 243, 0.1);
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--info-blue);
+        }
+        
+        .gamer-list {
+            margin-top: 15px;
+        }
+        
+        .gamer-list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            margin-bottom: 5px;
+        }
+        
+        .login-as-btn {
+            padding: 5px 10px;
+            background-color: var(--success-green);
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        
+        .login-as-btn:hover {
+            background-color: #388e3c;
+        }
+        
+        .pin-btn {
+            padding: 15px;
+            font-size: 1.5rem;
+            background: var(--dark-gray);
+            color: var(--white);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .pin-btn:hover {
+            background: var(--medium-gray);
+            transform: scale(1.05);
+        }
+        
+        .pin-btn:active {
+            transform: scale(0.95);
+        }
+        
+        #pin-display {
+            font-size: 2rem;
+            letter-spacing: 15px;
+            color: var(--white);
+            margin-bottom: 10px;
+            text-align: center;
+            font-family: monospace;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #pin-error {
+            color: var(--alert-red);
+            font-size: 0.9rem;
+            height: 20px;
+            margin-top: 5px;
+            text-align: center;
+        }
+        
+        .pin-change-container {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        
+        .pin-input-container {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        
+        .pin-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.5rem;
+            letter-spacing: 10px;
+            text-align: center;
+            background: var(--black);
+            color: var(--white);
+            border: 2px solid var(--medium-gray);
+            border-radius: 8px;
+            outline: none;
+            font-family: monospace;
+        }
+        
+        .pin-input:focus {
+            border-color: var(--primary-red);
+        }
+        
+        .device-info {
+            background-color: rgba(33, 150, 243, 0.1);
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 0.85rem;
+            border-left: 3px solid var(--info-blue);
+        }
+        
+        .device-info i {
+            color: var(--info-blue);
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <!-- LOGIN MODAL -->
+    <div id="login-modal" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-title"><i class="fas fa-sign-in-alt"></i> Login to Battle Alert</h2>
+            <div class="login-form-container">
+                <div class="login-instructions">
+                    <p><i class="fas fa-user-shield"></i> Secure login with your gamer name and PIN.</p>
+                    <p style="font-size: 0.9rem; color: var(--warning-orange); margin-top: 10px;">
+                        <i class="fas fa-exclamation-triangle"></i> 
+                        Only login to your own account.
+                    </p>
+                </div>
+                
+                <div class="form-group">
+                    <label for="login-gamer-name">Gamer Name</label>
+                    <input type="text" id="login-gamer-name" placeholder="Enter your gamer name">
+                    <div id="login-error" style="color: var(--alert-red); font-size: 0.9rem; margin-top: 5px; display: none;">
+                        Gamer not found. Please check your name or register as a new user.
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="form-btn form-btn-secondary" id="cancel-login">Cancel</button>
+                    <button type="button" class="form-btn form-btn-primary" id="submit-login">Login</button>
+                </div>
+                
+                <div style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--medium-gray);">
+                    <p style="color: var(--medium-gray); margin-bottom: 10px;">Don't have an account?</p>
+                    <button type="button" class="form-btn form-btn-secondary" id="switch-to-register">
+                        <i class="fas fa-user-plus"></i> Register New Gamer
+                    </button>
+                </div>
+                
+                <div class="gamer-list" id="recent-gamers-list" style="display: none;">
+                    <h4 style="margin-bottom: 10px; color: var(--white);">Recent Gamers:</h4>
+                    <div id="gamers-list-container">
+                        <!-- Recent gamers will be listed here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <!-- REGISTRATION MODAL -->
+    <div id="registration-modal" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-title"><i class="fas fa-user-plus"></i> Register New Gamer</h2>
+            <form id="registration-form">
+                <div class="form-group">
+                    <label for="gamer-name">Gamer Name *</label>
+                    <input type="text" id="gamer-name" required placeholder="Enter your unique gamer name">
+                    <div id="name-error" style="color: var(--alert-red); font-size: 0.9rem; margin-top: 5px; display: none;">
+                        This name is already taken
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="gamer-pin">Create a 4-digit PIN *</label>
+                    <input type="password" id="gamer-pin" maxlength="4" pattern="[0-9]*" 
+                           placeholder="4-digit PIN (e.g., 1234)" inputmode="numeric" required>
+                    <div style="font-size: 0.8rem; color: var(--medium-gray); margin-top: 5px;">
+                        Choose a PIN you'll remember. It cannot be recovered if forgotten.
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="confirm-pin">Confirm PIN *</label>
+                    <input type="password" id="confirm-pin" maxlength="4" pattern="[0-9]*" 
+                           placeholder="Re-enter your PIN" inputmode="numeric" required>
+                    <div id="pin-error" style="color: var(--alert-red); font-size: 0.9rem; margin-top: 5px; display: none;">
+                        PINs do not match
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="alliance-name">Alliance Name *</label>
+                    <select id="alliance-name" required>
+                        <option value="">Select an alliance</option>
+                        <option value="FTroop">FTroop</option>
+                        <option value="custom">Custom Alliance</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" id="custom-alliance-group" style="display: none;">
+                    <label for="custom-alliance">Custom Alliance Name *</label>
+                    <input type="text" id="custom-alliance" placeholder="Enter your alliance name">
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="form-btn form-btn-secondary" id="cancel-registration">Cancel</button>
+                    <button type="submit" class="form-btn form-btn-primary">Register</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-firebase.initializeApp({
-    apiKey: "AIzaSyBVnI6XN0eL6gKelJuVbYejmhlmYSl89RI",
-    authDomain: "battle-alert-9db25.firebaseapp.com",
-    projectId: "battle-alert-9db25",
-    storageBucket: "battle-alert-9db25.firebasestorage.app",
-    messagingSenderId: "485179486012",
-    appId: "1:485179486012:web:fa2c712e452ad2dff03839"
-});
+    <!-- EDIT PROFILE MODAL -->
+    <div id="edit-profile-modal" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-title"><i class="fas fa-edit"></i> Edit My Profile</h2>
+            <form id="edit-profile-form">
+                <div class="form-group">
+                    <label for="edit-gamer-name">Gamer Name *</label>
+                    <input type="text" id="edit-gamer-name" required placeholder="Enter your gamer name">
+                    <div id="edit-name-error" style="color: var(--alert-red); font-size: 0.9rem; margin-top: 5px; display: none;">
+                        This name is already taken
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="edit-alliance-name">Alliance Name *</label>
+                    <select id="edit-alliance-name" required>
+                        <option value="">Select an alliance</option>
+                        <option value="FTroop">FTroop</option>
+                        <option value="custom">Custom Alliance</option>
+                    </select>
+                </div>
+                <div class="form-group" id="edit-custom-alliance-group" style="display: none;">
+                    <label for="edit-custom-alliance">Custom Alliance Name *</label>
+                    <input type="text" id="edit-custom-alliance" placeholder="Enter your alliance name">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="form-btn form-btn-secondary" id="cancel-edit">Cancel</button>
+                    <button type="submit" class="form-btn form-btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-const messaging = firebase.messaging();
+    <!-- SEND ALERT MODAL -->
+    <div id="send-alert-modal" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-title"><i class="fas fa-bullhorn"></i> Send Alert</h2>
+            <form id="send-alert-form">
+                <div class="form-group">
+                    <label for="alert-type">Alert Type *</label>
+                    <select id="alert-type" required>
+                        <option value="">Select alert type</option>
+                        <option value="attack">Under Attack!</option>
+                        <option value="reinforce">Reinforcements Needed!</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="alert-recipient">Send To *</label>
+                    <select id="alert-recipient" required>
+                        <option value="">Select recipient</option>
+                        <option value="all">All Gamers</option>
+                        <option value="alliance">My Alliance Only</option>
+                        <option value="specific">Specific Gamer</option>
+                    </select>
+                </div>
+                <div class="form-group" id="specific-gamer-group" style="display: none;">
+                    <label for="specific-gamer">Select Gamer</label>
+                    <select id="specific-gamer">
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="alert-message">Additional Message (Optional)</label>
+                    <textarea id="alert-message" placeholder="Add any additional details about the alert..."></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="form-btn form-btn-secondary" id="cancel-alert">Cancel</button>
+                    <button type="submit" class="form-btn form-btn-primary">Send Alert</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-// Background message handler
-messaging.onBackgroundMessage((payload) => {
-    console.log('[firebase-messaging-sw.js] Background message:', payload);
-    
-    const notificationTitle = payload.notification?.title || '🚨 Battle Alert';
-    const notificationOptions = {
-        body: payload.notification?.body || 'New alert received!',
-        icon: 'https://cdn-icons-png.flaticon.com/512/1077/1077976.png',
-        badge: 'https://cdn-icons-png.flaticon.com/512/1077/1077976.png',
-        tag: 'battle-alert-' + Date.now(),
-        requireInteraction: true,
-        data: payload.data || {}
-    };
-    
-    return self.registration.showNotification(notificationTitle, notificationOptions);
-});
+    <!-- QUICK ALERT MODAL -->
+    <div id="quick-alert-modal" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-title"><i class="fas fa-bullhorn"></i> Send Quick Alert</h2>
+            <div id="quick-alert-content">
+                <p>Send alert to: <strong id="quick-alert-recipient">[Gamer Name]</strong></p>
+                <div class="form-group">
+                    <label for="quick-alert-type">Alert Type *</label>
+                    <select id="quick-alert-type" required>
+                        <option value="">Select alert type</option>
+                        <option value="attack">Under Attack!</option>
+                        <option value="reinforce">Reinforcements Needed!</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="quick-alert-message">Additional Message (Optional)</label>
+                    <textarea id="quick-alert-message" placeholder="Add any additional details about the alert..."></textarea>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="form-btn form-btn-secondary" id="cancel-quick-alert">Cancel</button>
+                <button type="button" class="form-btn form-btn-primary" id="send-quick-alert">Send Alert</button>
+            </div>
+        </div>
+    </div>
 
-// Handle notification clicks
-self.addEventListener('notificationclick', (event) => {
-    console.log('Notification clicked:', event.notification);
-    event.notification.close();
-    
-    if (event.action === 'open' || !event.action) {
-        event.waitUntil(
-            clients.matchAll({ type: 'window', includeUncontrolled: true })
-            .then((clientList) => {
-                // Check if there's already a window open
-                for (const client of clientList) {
-                    if (client.url.includes('battle') && 'focus' in client) {
-                        return client.focus();
+    <!-- ACTIVE ALERT MODAL -->
+    <div id="active-alert-modal" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Incoming Alert!</h2>
+            <div id="active-alert-content">
+                <div style="text-align: center; margin: 20px 0;">
+                    <i class="fas fa-bullhorn" style="font-size: 3rem; color: var(--alert-red); margin-bottom: 20px;"></i>
+                    <h3 id="alert-type-display" style="color: var(--white); margin-bottom: 10px;">Under Attack!</h3>
+                    <p id="alert-message-display" style="color: var(--light-gray); margin-bottom: 20px;"></p>
+                    <p id="alert-sender-display" style="color: var(--medium-gray); font-size: 0.9rem;">From: Commander</p>
+                    <p id="alert-time-display" style="color: var(--medium-gray); font-size: 0.9rem;">Time: Just now</p>
+                </div>
+                <div class="form-actions" style="justify-content: center;">
+                    <button type="button" class="form-btn alert-btn-success" id="got-it-btn" style="padding: 15px 40px;">
+                        <i class="fas fa-check"></i> I Got It - Cancel Alert
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- VOTE REMOVE MODAL -->
+    <div id="vote-remove-modal" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-title"><i class="fas fa-user-slash"></i> Vote to Remove Gamer</h2>
+            <div id="vote-content">
+                <p>You are voting to remove <strong id="vote-gamer-name">[Gamer Name]</strong> from the system.</p>
+                <p style="color: var(--medium-gray); font-size: 0.9rem; margin-top: 10px;">
+                    This gamer will be automatically removed if <strong>5 votes</strong> are received within 24 hours.
+                </p>
+                
+                <div class="vote-reason">
+                    <label for="vote-reason">Reason for removal (required):</label>
+                    <textarea id="vote-reason" placeholder="Explain why this gamer should be removed..."></textarea>
+                </div>
+                
+                <div class="current-votes" id="current-votes-container" style="display: none;">
+                    <h4 style="margin-bottom: 10px;">Current Votes:</h4>
+                    <div id="votes-list">
+                    </div>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="form-btn form-btn-secondary" id="cancel-vote">Cancel</button>
+                <button type="button" class="form-btn form-btn-danger" id="submit-vote">Submit Vote</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CHANGE PIN MODAL -->
+    <div id="change-pin-modal" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-title"><i class="fas fa-key"></i> Change Your PIN</h2>
+            <div class="pin-change-container">
+                <div class="form-group">
+                    <label for="current-pin">Current PIN *</label>
+                    <input type="password" id="current-pin" maxlength="4" pattern="[0-9]*" 
+                           placeholder="Enter current PIN" inputmode="numeric" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="new-pin">New 4-digit PIN *</label>
+                    <input type="password" id="new-pin" maxlength="4" pattern="[0-9]*" 
+                           placeholder="Enter new PIN" inputmode="numeric" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="confirm-new-pin">Confirm New PIN *</label>
+                    <input type="password" id="confirm-new-pin" maxlength="4" pattern="[0-9]*" 
+                           placeholder="Re-enter new PIN" inputmode="numeric" required>
+                    <div id="new-pin-error" style="color: var(--alert-red); font-size: 0.9rem; margin-top: 5px; display: none;">
+                        PINs do not match
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="form-btn form-btn-secondary" id="cancel-pin-change">Cancel</button>
+                    <button type="button" class="form-btn form-btn-primary" id="submit-pin-change">Change PIN</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CLEAR ALERTS MODAL -->
+    <div id="clear-alerts-modal" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-title"><i class="fas fa-trash-alt"></i> Clear All Alerts</h2>
+            <div id="clear-alerts-content">
+                <p>Are you sure you want to clear all alert logs?</p>
+                <p style="color: var(--medium-gray); font-size: 0.9rem; margin-top: 10px;">
+                    This will remove all alert history but will NOT affect gamer statistics.
+                </p>
+                <div class="form-group" style="margin-top: 20px;">
+                    <label>
+                        <input type="checkbox" id="confirm-clear">
+                        I understand this action cannot be undone
+                    </label>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="form-btn form-btn-secondary" id="cancel-clear-alerts">Cancel</button>
+                <button type="button" class="form-btn form-btn-danger" id="confirm-clear-alerts" disabled>Clear All Alerts</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- RESET STATS MODAL -->
+    <div id="reset-stats-modal" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-title"><i class="fas fa-chart-line"></i> Reset Statistics</h2>
+            <div id="reset-stats-content">
+                <p>Are you sure you want to reset all statistics?</p>
+                <p style="color: var(--medium-gray); font-size: 0.9rem; margin-top: 10px;">
+                    This will reset today's alerts, total alerts, and response times to zero.
+                </p>
+                <div class="form-group" style="margin-top: 20px;">
+                    <label>
+                        <input type="checkbox" id="confirm-reset">
+                        I understand this action cannot be undone
+                    </label>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="form-btn form-btn-secondary" id="cancel-reset-stats">Cancel</button>
+                <button type="button" class="form-btn form-btn-danger" id="confirm-reset-stats" disabled>Reset Statistics</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP -->
+    <div class="container">
+        <header>
+            <div class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-bell"></i>
+                </div>
+                <div class="logo-text">
+                    <h1>Battle Alert</h1>
+                    <p>Universal Game Notification System</p>
+                </div>
+            </div>
+            <div class="header-controls">
+                <div class="current-user" id="current-user-display" style="display: none;">
+                    <div class="profile-dropdown">
+                        <button class="profile-btn" id="profile-btn">
+                            <i class="fas fa-user"></i>
+                            <span id="current-username">Guest</span>
+                            <i class="fas fa-chevron-down" style="font-size: 0.8rem;"></i>
+                        </button>
+                        <div class="dropdown-menu" id="profile-dropdown-menu">
+                            <div class="dropdown-item" id="view-profile-btn">
+                                <i class="fas fa-id-card"></i> View My Profile
+                            </div>
+                            <div class="dropdown-item" id="edit-profile-header-btn">
+                                <i class="fas fa-edit"></i> Edit Profile
+                            </div>
+                            <div class="dropdown-item" id="change-pin-btn">
+                                <i class="fas fa-key"></i> Change PIN
+                            </div>
+                            <div class="dropdown-item" id="clear-my-alerts-btn">
+                                <i class="fas fa-bell-slash"></i> Clear My Alerts
+                            </div>
+                            <div class="dropdown-item danger" id="logout-header-btn">
+                                <i class="fas fa-sign-out-alt"></i> Logout
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button class="send-alert-btn" id="open-send-alert" style="display: none;">
+                    <i class="fas fa-bullhorn"></i> Send Alert
+                </button>
+                <button class="login-btn" id="open-login">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </button>
+                <button class="register-btn" id="open-registration">
+                    <i class="fas fa-user-plus"></i> Register
+                </button>
+            </div>
+        </header>
+
+        <!-- GUEST WELCOME MESSAGE -->
+        <div id="guest-welcome" class="card" style="display: none;">
+            <h2 class="card-title"><i class="fas fa-gamepad"></i> Welcome to Battle Alert!</h2>
+            <div style="text-align: center; padding: 30px;">
+                <div style="font-size: 4rem; color: var(--primary-red); margin-bottom: 20px;">
+                    <i class="fas fa-bell"></i>
+                </div>
+                <h3 style="color: var(--white); margin-bottom: 15px;">Ready to Coordinate with Your Team?</h3>
+                <p style="color: var(--medium-gray); margin-bottom: 25px; max-width: 600px; margin-left: auto; margin-right: auto;">
+                    Battle Alert helps gamers coordinate in real-time. Send alerts, request reinforcements, 
+                    and stay connected with your alliance.
+                </p>
+                <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                    <button class="form-btn form-btn-primary" id="login-from-welcome">
+                        <i class="fas fa-sign-in-alt"></i> Login to Continue
+                    </button>
+                    <button class="form-btn form-btn-secondary" id="register-from-welcome">
+                        <i class="fas fa-user-plus"></i> Register New Account
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- USER CONTENT (HIDDEN WHEN NOT LOGGED IN) -->
+        <div id="user-content" style="display: none;">
+            <div class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-title">TODAY'S ALERTS</div>
+                    <div class="stat-value" id="today-alerts">0</div>
+                    <div class="stat-subtext" id="today-response-time">Avg Response: N/A</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">TOTAL ALERTS</div>
+                    <div class="stat-value" id="total-alerts">0</div>
+                    <div class="stat-subtext" id="total-response-time">Avg Response: N/A</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">ACTIVE GAMERS</div>
+                    <div class="stat-value" id="active-gamers">0</div>
+                    <div class="stat-subtext">Registered in system</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">RESPONSE RATE</div>
+                    <div class="stat-value" id="response-rate">0%</div>
+                    <div class="stat-subtext">Alerts responded to</div>
+                </div>
+            </div>
+
+            <!-- ADMIN CONTROLS -->
+            <div class="card" id="admin-controls-card" style="display: none;">
+                <h2 class="card-title"><i class="fas fa-user-shield"></i> Admin Controls</h2>
+                <div class="admin-controls">
+                    <h4><i class="fas fa-cogs"></i> System Management</h4>
+                    <div class="action-buttons">
+                        <button class="action-btn clear-alerts-btn" id="clear-all-alerts-btn">
+                            <i class="fas fa-trash-alt"></i> Clear All Alert Logs
+                        </button>
+                        <button class="action-btn vote-btn" id="reset-stats-btn">
+                            <i class="fas fa-chart-line"></i> Reset Statistics
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 class="card-title"><i class="fas fa-history"></i> Recent Alert Log</h2>
+                <div class="alert-log-container" id="alert-log-container">
+                    <div style="text-align: center; padding: 20px; color: var(--medium-gray);">
+                        No alerts sent yet
+                    </div>
+                </div>
+            </div>
+
+            <!-- NOTIFICATION SETTINGS -->
+            <div class="card">
+                <h2 class="card-title"><i class="fas fa-bell"></i> Notification Settings</h2>
+                <div id="notification-status-container"></div>
+                <div id="device-compatibility-info" class="device-info" style="display: none;">
+                    <i class="fas fa-info-circle"></i>
+                    <span id="device-info-text"></span>
+                </div>
+                <button class="alert-btn alert-btn-primary" id="enable-notifications-btn">
+                    <i class="fas fa-bell"></i> Enable Browser Notifications
+                </button>
+                <button class="alert-btn alert-btn-primary" id="test-notification-btn" style="display: none; margin-top: 10px;">
+                    <i class="fas fa-check"></i> Test Notification
+                </button>
+                <div style="margin-top: 15px; font-size: 0.9rem; color: var(--medium-gray);">
+                    <p><i class="fas fa-info-circle"></i> Get alerts on all devices when help is needed</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 class="card-title"><i class="fas fa-users"></i> Registered Gamers</h2>
+                
+                <div class="search-filter-container">
+                    <div class="search-box">
+                        <input type="text" id="search-gamers" placeholder="Search by gamer name or alliance...">
+                    </div>
+                    <div class="filter-box">
+                        <select id="filter-alliance">
+                            <option value="">All Alliances</option>
+                            <option value="FTroop">FTroop</option>
+                        </select>
+                    </div>
+                    <div class="filter-box">
+                        <select id="sort-gamers">
+                            <option value="name-asc">Sort by: Name (A-Z)</option>
+                            <option value="name-desc">Sort by: Name (Z-A)</option>
+                            <option value="alliance-asc">Sort by: Alliance (A-Z)</option>
+                            <option value="alliance-desc">Sort by: Alliance (Z-A)</option>
+                            <option value="alerts-asc">Sort by: Alerts (Low-High)</option>
+                            <option value="alerts-desc">Sort by: Alerts (High-Low)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="gamers-table-container">
+                    <table class="gamers-table" id="gamers-table">
+                        <thead>
+                            <tr>
+                                <th data-sort="name">Gamer Name <i class="fas fa-sort"></i></th>
+                                <th data-sort="alliance">Alliance <i class="fas fa-sort"></i></th>
+                                <th data-sort="status">Status <i class="fas fa-sort"></i></th>
+                                <th data-sort="alerts">Alerts <i class="fas fa-sort"></i></th>
+                                <th data-sort="response">Avg Response <i class="fas fa-sort"></i></th>
+                                <th>Quick Actions</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="gamers-table-body">
+                        </tbody>
+                    </table>
+                </div>
+                <div style="text-align: center; margin-top: 20px; color: var(--medium-gray);">
+                    <p id="no-gamers-message" style="display: none;">No gamers registered yet.</p>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Battle Alert - Universal Notification System &copy; 2026</p>
+        </footer>
+    </div>
+
+    <!-- NOTIFICATION TOAST -->
+    <div id="notification" class="notification" style="display: none;">
+        <i class="fas fa-bell"></i>
+        <span id="notification-text">Notification text here</span>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { 
+            getFirestore, 
+            collection, 
+            addDoc, 
+            updateDoc, 
+            deleteDoc, 
+            doc, 
+            serverTimestamp,
+            query,
+            where,
+            orderBy,
+            getDocs,
+            onSnapshot,
+            limit,
+            writeBatch
+        } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBVnI6XN0eL6gKelJuVbYejmhlmYSl89RI",
+  authDomain: "battle-alert-9db25.firebaseapp.com",
+  projectId: "battle-alert-9db25",
+  storageBucket: "battle-alert-9db25.firebasestorage.app",
+  messagingSenderId: "485179486012",
+  appId: "1:485179486012:web:fa2c712e452ad2dff03839"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        let messagingInstance = null;
+        let currentUser = null;
+        let allGamers = [];
+        let currentAlert = null;
+        let currentVoteGamer = null;
+        let quickAlertGamer = null;
+        let pinAttempts = 0;
+        const MAX_PIN_ATTEMPTS = 3;
+        let notificationsEnabled = true;
+        let serviceWorkerRegistration = null;
+
+        async function hashPin(pin) {
+            const pinWithSalt = pin + 'battleAlertSalt2026';
+            const encoder = new TextEncoder();
+            const data = encoder.encode(pinWithSalt);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            return hashHex;
+        }
+
+        async function verifyPin(enteredPin, storedHash) {
+            const enteredHash = await hashPin(enteredPin);
+            return enteredHash === storedHash;
+        }
+
+        async function checkGamerNameExists(gamerName) {
+            try {
+                if (!allGamers || allGamers.length === 0) {
+                    await loadGamers();
+                }
+                
+                const exists = allGamers.some(g => 
+                    g.gamerName.toLowerCase() === gamerName.toLowerCase()
+                );
+                
+                return exists;
+            } catch (error) {
+                console.error('Error checking gamer name:', error);
+                return false;
+            }
+        }
+
+        const loginModal = document.getElementById('login-modal');
+        const openLoginBtn = document.getElementById('open-login');
+        const cancelLoginBtn = document.getElementById('cancel-login');
+        const submitLoginBtn = document.getElementById('submit-login');
+        const loginGamerNameInput = document.getElementById('login-gamer-name');
+        const loginError = document.getElementById('login-error');
+        const switchToRegisterBtn = document.getElementById('switch-to-register');
+        const recentGamersList = document.getElementById('recent-gamers-list');
+        const gamersListContainer = document.getElementById('gamers-list-container');
+        
+        const registrationModal = document.getElementById('registration-modal');
+        const openRegistrationBtn = document.getElementById('open-registration');
+        const cancelRegistrationBtn = document.getElementById('cancel-registration');
+        const registrationForm = document.getElementById('registration-form');
+        const allianceSelect = document.getElementById('alliance-name');
+        const customAllianceGroup = document.getElementById('custom-alliance-group');
+        const nameError = document.getElementById('name-error');
+        const pinError = document.getElementById('pin-error');
+        
+        const editProfileModal = document.getElementById('edit-profile-modal');
+        const editProfileForm = document.getElementById('edit-profile-form');
+        const cancelEditBtn = document.getElementById('cancel-edit');
+        const editAllianceSelect = document.getElementById('edit-alliance-name');
+        const editCustomAllianceGroup = document.getElementById('edit-custom-alliance-group');
+        const editNameError = document.getElementById('edit-name-error');
+        
+        const sendAlertModal = document.getElementById('send-alert-modal');
+        const openSendAlertBtn = document.getElementById('open-send-alert');
+        const sendAlertForm = document.getElementById('send-alert-form');
+        const cancelAlertBtn = document.getElementById('cancel-alert');
+        const specificGamerGroup = document.getElementById('specific-gamer-group');
+        const recipientSelect = document.getElementById('alert-recipient');
+        const alertTypeSelect = document.getElementById('alert-type');
+        const alertMessageInput = document.getElementById('alert-message');
+        
+        const quickAlertModal = document.getElementById('quick-alert-modal');
+        const quickAlertRecipient = document.getElementById('quick-alert-recipient');
+        const quickAlertType = document.getElementById('quick-alert-type');
+        const quickAlertMessage = document.getElementById('quick-alert-message');
+        const cancelQuickAlertBtn = document.getElementById('cancel-quick-alert');
+        const sendQuickAlertBtn = document.getElementById('send-quick-alert');
+        
+        const activeAlertModal = document.getElementById('active-alert-modal');
+        const gotItBtn = document.getElementById('got-it-btn');
+        
+        const voteRemoveModal = document.getElementById('vote-remove-modal');
+        const voteGamerName = document.getElementById('vote-gamer-name');
+        const cancelVoteBtn = document.getElementById('cancel-vote');
+        const submitVoteBtn = document.getElementById('submit-vote');
+        const voteReasonTextarea = document.getElementById('vote-reason');
+        const currentVotesContainer = document.getElementById('current-votes-container');
+        const votesList = document.getElementById('votes-list');
+        
+        const changePinModal = document.getElementById('change-pin-modal');
+        const cancelPinChangeBtn = document.getElementById('cancel-pin-change');
+        const submitPinChangeBtn = document.getElementById('submit-pin-change');
+        const newPinError = document.getElementById('new-pin-error');
+        
+        const clearAlertsModal = document.getElementById('clear-alerts-modal');
+        const cancelClearAlertsBtn = document.getElementById('cancel-clear-alerts');
+        const confirmClearAlertsBtn = document.getElementById('confirm-clear-alerts');
+        const confirmClearCheckbox = document.getElementById('confirm-clear');
+        
+        const resetStatsModal = document.getElementById('reset-stats-modal');
+        const cancelResetStatsBtn = document.getElementById('cancel-reset-stats');
+        const confirmResetStatsBtn = document.getElementById('confirm-reset-stats');
+        const confirmResetCheckbox = document.getElementById('confirm-reset');
+        
+        const guestWelcome = document.getElementById('guest-welcome');
+        const userContent = document.getElementById('user-content');
+        const notificationElement = document.getElementById('notification');
+        const notificationText = document.getElementById('notification-text');
+        const currentUserDisplay = document.getElementById('current-user-display');
+        const currentUsername = document.getElementById('current-username');
+        const loginFromWelcomeBtn = document.getElementById('login-from-welcome');
+        const registerFromWelcomeBtn = document.getElementById('register-from-welcome');
+        
+        const profileBtn = document.getElementById('profile-btn');
+        const profileDropdownMenu = document.getElementById('profile-dropdown-menu');
+        const viewProfileBtn = document.getElementById('view-profile-btn');
+        const editProfileHeaderBtn = document.getElementById('edit-profile-header-btn');
+        const changePinBtn = document.getElementById('change-pin-btn');
+        const clearMyAlertsBtn = document.getElementById('clear-my-alerts-btn');
+        const logoutHeaderBtn = document.getElementById('logout-header-btn');
+        
+        const adminControlsCard = document.getElementById('admin-controls-card');
+        const clearAllAlertsBtn = document.getElementById('clear-all-alerts-btn');
+        const resetStatsBtn = document.getElementById('reset-stats-btn');
+        
+        const notificationStatusContainer = document.getElementById('notification-status-container');
+        const enableNotificationsBtn = document.getElementById('enable-notifications-btn');
+        const testNotificationBtn = document.getElementById('test-notification-btn');
+        const deviceCompatibilityInfo = document.getElementById('device-compatibility-info');
+        const deviceInfoText = document.getElementById('device-info-text');
+        
+        const searchGamersInput = document.getElementById('search-gamers');
+        const filterAllianceSelect = document.getElementById('filter-alliance');
+        const sortGamersSelect = document.getElementById('sort-gamers');
+        const gamersTableBody = document.getElementById('gamers-table-body');
+        const noGamersMessage = document.getElementById('no-gamers-message');
+        
+        const todayAlertsElement = document.getElementById('today-alerts');
+        const todayResponseTimeElement = document.getElementById('today-response-time');
+        const totalAlertsElement = document.getElementById('total-alerts');
+        const totalResponseTimeElement = document.getElementById('total-response-time');
+        const activeGamersElement = document.getElementById('active-gamers');
+        const responseRateElement = document.getElementById('response-rate');
+        
+        const alertLogContainer = document.getElementById('alert-log-container');
+
+        function loadNotificationSettings() {
+            const saved = localStorage.getItem('battleAlertNotificationsEnabled');
+            if (saved !== null) {
+                notificationsEnabled = saved === 'true';
+            }
+        }
+
+        function saveNotificationSettings() {
+            localStorage.setItem('battleAlertNotificationsEnabled', notificationsEnabled.toString());
+        }
+
+        function detectDeviceInfo() {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+            const isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
+            
+            let deviceType = 'Desktop';
+            if (isMobile) deviceType = 'Mobile';
+            if (isIOS) deviceType = 'iOS';
+            
+            let browser = 'Unknown';
+            if (isSafari) browser = 'Safari';
+            else if (isFirefox) browser = 'Firefox';
+            else if (navigator.userAgent.indexOf('Chrome') > -1) browser = 'Chrome';
+            
+            return {
+                isMobile,
+                isIOS,
+                isSafari,
+                isFirefox,
+                deviceType,
+                browser
+            };
+        }
+
+        function showDeviceCompatibilityInfo() {
+            const deviceInfo = detectDeviceInfo();
+            let message = '';
+            
+            if (deviceInfo.isIOS && deviceInfo.isSafari) {
+                message = 'iOS Safari requires website to be added to Home Screen for push notifications.';
+            } else if (deviceInfo.isIOS) {
+                message = 'iOS devices require special setup for push notifications.';
+            } else if (deviceInfo.isMobile) {
+                message = 'Make sure notifications are enabled in your browser settings.';
+            } else {
+                message = `Using ${deviceInfo.browser} on ${deviceInfo.deviceType}.`;
+            }
+            
+            deviceInfoText.textContent = message;
+            deviceCompatibilityInfo.style.display = 'block';
+        }
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            loadNotificationSettings();
+            showDeviceCompatibilityInfo();
+            
+            const savedUser = localStorage.getItem('battleAlertCurrentUser');
+            if (savedUser) {
+                try {
+                    const userData = JSON.parse(savedUser);
+                    await loadGamers();
+                    
+                    const gamer = allGamers.find(g => g.gamerName === userData.gamerName);
+                    
+                    if (gamer) {
+                        currentUser = {
+                            id: gamer.id,
+                            gamerName: gamer.gamerName,
+                            alliance: gamer.alliance,
+                            totalAlerts: gamer.totalAlerts || 0,
+                            totalResponseTime: gamer.totalResponseTime || 0,
+                            status: gamer.status || 'safe'
+                        };
+                        
+                        showUserInterface();
+                        showNotification('Welcome Back', `Welcome back, ${currentUser.gamerName}!`);
+                        updateNotificationStatus();
+                        updateAdminControls();
+                    } else {
+                        localStorage.removeItem('battleAlertCurrentUser');
+                        showGuestInterface();
+                    }
+                } catch (error) {
+                    localStorage.removeItem('battleAlertCurrentUser');
+                    showGuestInterface();
+                }
+            } else {
+                showGuestInterface();
+            }
+            
+            await initializePushNotifications();
+            setupEventListeners();
+            updateStats();
+            loadAlertLog();
+            
+            checkForActiveAlerts();
+            setupRealtimeUpdates();
+        });
+
+        async function registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+        try {
+            // Register the actual firebase-messaging-sw.js file
+            serviceWorkerRegistration = await navigator.serviceWorker.register('firebase-messaging-sw.js');
+            console.log('Service Worker registered at scope:', serviceWorkerRegistration.scope);
+            return serviceWorkerRegistration;
+        } catch (error) {
+            console.error('Service Worker registration failed:', error);
+            return null;
+        }
+    }
+    return null;
+}
+
+        async function initializePushNotifications() {
+    try {
+        // Check basic support
+        if (!('Notification' in window)) {
+            console.log('Browser does not support notifications');
+            return;
+        }
+        
+        if (!('serviceWorker' in navigator)) {
+            console.log('Service Worker not supported');
+            return;
+        }
+        
+        if (!('PushManager' in window)) {
+            console.log('Push API not supported');
+            return;
+        }
+        
+        // Register service worker
+        serviceWorkerRegistration = await registerServiceWorker();
+        if (!serviceWorkerRegistration) {
+            console.log('Failed to register service worker');
+            return;
+        }
+        
+        // Wait for service worker to be ready
+        await navigator.serviceWorker.ready;
+        console.log('Service Worker ready');
+        
+        // Import Firebase Messaging
+        const { getMessaging, onMessage, isSupported, getToken } = await import(
+            "https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging.js"
+        );
+        
+        // Check if messaging is supported
+        const isMessagingSupported = await isSupported();
+        if (!isMessagingSupported) {
+            console.log('FCM not supported in this browser');
+            return;
+        }
+        
+        // Initialize messaging
+        messagingInstance = getMessaging(app);
+        
+        // Handle foreground messages
+        onMessage(messagingInstance, (payload) => {
+            console.log('Foreground message received:', payload);
+            if (payload.notification) {
+                showNotification(
+                    payload.notification.title || 'Battle Alert',
+                    payload.notification.body || 'New alert received'
+                );
+                
+                // Also check for active alerts in Firestore
+                checkForActiveAlerts();
+            }
+        });
+        
+        console.log('FCM initialized successfully');
+        updateNotificationStatus();
+        
+    } catch (error) {
+        console.error('Error initializing push notifications:', error);
+    }
+}
+        
+        function showDeviceSpecificMessage(message) {
+            deviceInfoText.textContent = message;
+            deviceCompatibilityInfo.style.display = 'block';
+        }
+        
+        async function getAndStoreFCMToken() {
+            try {
+                if (!messagingInstance || !serviceWorkerRegistration) return;
+                
+                const { getToken } = await import(
+                    "https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging.js"
+                );
+                
+                const vapidKey = "BEwiF4gZjQM5OC8-G-NeTUh2Fadlr4f1w0VqRnhALtP-_RfQ4ewBYpscBEzyLSDi94yi5ixi3epQhsfKzd4-ghY";
+                const fcmToken = await getToken(messagingInstance, { 
+                    vapidKey,
+                    serviceWorkerRegistration: serviceWorkerRegistration
+                });
+                
+                if (fcmToken) {
+                    localStorage.setItem('battleAlertFCMToken', fcmToken);
+                    
+                    if (currentUser) {
+                        const userRef = doc(db, 'members', currentUser.id);
+                        await updateDoc(userRef, {
+                            fcmToken: fcmToken,
+                            lastSeen: serverTimestamp()
+                        });
                     }
                 }
-                // If not, open a new window
-                if (clients.openWindow) {
-                    return clients.openWindow('/');
+            } catch (error) {
+                if (error.code === 'messaging/permission-blocked') {
+                    showDeviceSpecificMessage('Notifications blocked. Enable in browser settings.');
+                } else if (error.code === 'messaging/unsupported-browser') {
+                    showDeviceSpecificMessage('Browser does not support push notifications.');
                 }
-            })
-        );
+            }
+        }
+
+        async function requestNotificationPermission() {
+    try {
+        // First check current permission
+        if (Notification.permission === 'granted') {
+            showNotification('Already Enabled', 'Notifications are already enabled!');
+            enableExistingNotifications();
+            return;
+        }
+        
+        if (Notification.permission === 'denied') {
+            showNotification('Blocked', 'Notifications were previously blocked. Please enable them in browser settings.');
+            
+            // Provide helpful instructions based on device
+            const deviceInfo = detectDeviceInfo();
+            let instructions = '';
+            
+            if (deviceInfo.isIOS) {
+                instructions = 'iOS: Settings > Safari > Notifications > Allow for this website';
+            } else if (deviceInfo.isMobile) {
+                instructions = 'Mobile: Tap menu (⋮) > Settings > Site settings > Notifications > Allow';
+            } else {
+                instructions = 'Desktop: Click the lock icon in address bar > Site settings > Notifications > Allow';
+            }
+            
+            if (confirm(`Notifications blocked. ${instructions}\n\nOpen browser settings?`)) {
+                // Can't directly open settings, but we can guide them
+                showNotification('Settings Help', instructions);
+            }
+            return;
+        }
+        
+        // Default state - request permission directly
+        console.log("Requesting notification permission...");
+        
+        const permission = await Notification.requestPermission();
+        
+        if (permission === 'granted') {
+            notificationsEnabled = true;
+            saveNotificationSettings();
+            showNotification('Success', 'Notifications enabled successfully!');
+            
+            // Get and store FCM token
+            await getAndStoreFCMToken();
+            updateNotificationStatus();
+            
+            // Show test notification
+            setTimeout(() => {
+                if (notificationsEnabled) {
+                    try {
+                        new Notification('Battle Alert', {
+                            body: 'Notifications are now enabled! You will receive instant battle alerts.',
+                            icon: 'https://cdn-icons-png.flaticon.com/512/1077/1077976.png',
+                            badge: 'https://cdn-icons-png.flaticon.com/512/1077/1077976.png'
+                        });
+                    } catch (e) {}
+                }
+            }, 1000);
+            
+        } else if (permission === 'denied') {
+            notificationsEnabled = false;
+            saveNotificationSettings();
+            showNotification('Blocked', 'Notifications were blocked.');
+            updateNotificationStatus();
+        } else {
+            notificationsEnabled = false;
+            saveNotificationSettings();
+            showNotification('Info', 'Notification permission not granted.');
+        }
+        
+    } catch (error) {
+        console.error('Error requesting notification permission:', error);
+        showNotification('Error', 'Failed to enable notifications');
     }
-});
+}
+        
+        async function handlePermissionResult(permission) {
+            if (permission === 'granted') {
+                notificationsEnabled = true;
+                saveNotificationSettings();
+                showNotification('Success', 'Notifications enabled successfully!');
+                
+                await getAndStoreFCMToken();
+                updateNotificationStatus();
+                
+                setTimeout(() => {
+                    if (notificationsEnabled) {
+                        try {
+                            new Notification('Battle Alert', {
+                                body: 'Notifications are now enabled! You will receive battle alerts.',
+                                icon: 'https://cdn-icons-png.flaticon.com/512/1077/1077976.png',
+                                badge: 'https://cdn-icons-png.flaticon.com/512/1077/1077976.png'
+                            });
+                        } catch (e) {}
+                    }
+                }, 1000);
+            } else if (permission === 'denied') {
+                notificationsEnabled = false;
+                saveNotificationSettings();
+                showNotification('Blocked', 'Notifications were blocked. Enable them in browser settings.');
+                updateNotificationStatus();
+            } else {
+                notificationsEnabled = false;
+                saveNotificationSettings();
+                showNotification('Info', 'Notification permission not granted');
+            }
+        }
+
+        function disableNotifications() {
+            notificationsEnabled = false;
+            saveNotificationSettings();
+            updateNotificationStatus();
+            showNotification('Notifications Disabled', 'You will no longer receive browser notifications.');
+        }
+
+        function enableExistingNotifications() {
+            notificationsEnabled = true;
+            saveNotificationSettings();
+            updateNotificationStatus();
+            showNotification('Notifications Enabled', 'Browser notifications are now enabled!');
+        }
+
+        function testNotification() {
+            if (Notification.permission !== 'granted') {
+                showNotification('Error', 'Notifications are not enabled. Please enable them first.');
+                return;
+            }
+
+            if (!notificationsEnabled) {
+                showNotification('Error', 'Notifications are disabled. Enable them in notification settings.');
+                return;
+            }
+
+            showNotification('Test Notification', 'This is a test notification from Battle Alert!');
+
+            try {
+                new Notification('Battle Alert - Test', {
+                    body: 'Your notifications are working correctly!',
+                    icon: 'https://cdn-icons-png.flaticon.com/512/1077/1077976.png',
+                    badge: 'https://cdn-icons-png.flaticon.com/512/1077/1077976.png'
+                });
+            } catch (e) {}
+        }
+
+        function updateNotificationStatus() {
+            if (!notificationStatusContainer) return;
+
+            const permission = Notification.permission;
+            const deviceInfo = detectDeviceInfo();
+            
+            if (permission === 'granted' && notificationsEnabled) {
+                notificationStatusContainer.innerHTML = `
+                    <div class="notification-status-box notification-enabled">
+                        <p><i class="fas fa-check-circle" style="color: #4caf50;"></i> <strong>Notifications Enabled ✓</strong></p>
+                        <p style="font-size: 0.9rem; margin-top: 5px;">
+                            ${deviceInfo.isMobile ? 'Mobile' : 'Desktop'} notifications are active
+                        </p>
+                        <div style="margin-top: 10px;">
+                            <button class="action-btn" id="disable-notifications-btn" 
+                                    style="background-color: var(--medium-gray);">
+                                <i class="fas fa-bell-slash"></i> Disable Notifications
+                            </button>
+                        </div>
+                    </div>
+                `;
+                enableNotificationsBtn.style.display = 'none';
+                testNotificationBtn.style.display = 'block';
+            } else if (permission === 'granted' && !notificationsEnabled) {
+                notificationStatusContainer.innerHTML = `
+                    <div class="notification-status-box notification-default">
+                        <p><i class="fas fa-bell-slash" style="color: #2196f3;"></i> <strong>Notifications Disabled</strong></p>
+                        <p style="font-size: 0.9rem; margin-top: 5px;">Notifications are available but currently disabled</p>
+                        <div style="margin-top: 10px;">
+                            <button class="action-btn" id="enable-notifications-btn-existing">
+                                <i class="fas fa-bell"></i> Enable Notifications
+                            </button>
+                        </div>
+                    </div>
+                `;
+                enableNotificationsBtn.style.display = 'none';
+                testNotificationBtn.style.display = 'none';
+            } else if (permission === 'denied') {
+                notificationStatusContainer.innerHTML = `
+                    <div class="notification-status-box notification-denied">
+                        <p><i class="fas fa-ban" style="color: #f44336;"></i> <strong>Notifications Blocked ✗</strong></p>
+                        <p style="font-size: 0.9rem; margin-top: 5px;">Enable notifications in your browser settings</p>
+                        <div style="margin-top: 10px;">
+                            <button class="action-btn" id="request-permission-again-btn">
+                                <i class="fas fa-cog"></i> Open Browser Settings
+                            </button>
+                        </div>
+                    </div>
+                `;
+                enableNotificationsBtn.style.display = 'none';
+                testNotificationBtn.style.display = 'none';
+            } else {
+                notificationStatusContainer.innerHTML = `
+                    <div class="notification-status-box notification-default">
+                        <p><i class="fas fa-bell-slash" style="color: #2196f3;"></i> <strong>Notifications Not Set Up</strong></p>
+                        <p style="font-size: 0.9rem; margin-top: 5px;">Enable notifications to receive instant battle alerts</p>
+                    </div>
+                `;
+                enableNotificationsBtn.style.display = 'block';
+                testNotificationBtn.style.display = 'none';
+            }
+            
+            setTimeout(() => {
+                const disableBtn = document.getElementById('disable-notifications-btn');
+                if (disableBtn) {
+                    disableBtn.addEventListener('click', disableNotifications);
+                }
+                
+                const enableExistingBtn = document.getElementById('enable-notifications-btn-existing');
+                if (enableExistingBtn) {
+                    enableExistingBtn.addEventListener('click', enableExistingNotifications);
+                }
+                
+                const requestAgainBtn = document.getElementById('request-permission-again-btn');
+                if (requestAgainBtn) {
+                    requestAgainBtn.addEventListener('click', () => {
+                        const deviceInfo = detectDeviceInfo();
+                        let helpMessage = '';
+                        
+                        if (deviceInfo.isIOS) {
+                            helpMessage = 'iOS: Settings > Safari > Notifications > Allow for this website';
+                        } else if (deviceInfo.isMobile) {
+                            helpMessage = 'Mobile: Browser settings > Site settings > Notifications > Allow';
+                        } else {
+                            helpMessage = 'Desktop: Click the lock icon in address bar > Site settings > Notifications > Allow';
+                        }
+                        
+                        showNotification('Help', helpMessage);
+                    });
+                }
+            }, 100);
+        }
+
+        function showGuestInterface() {
+            guestWelcome.style.display = 'block';
+            userContent.style.display = 'none';
+            currentUserDisplay.style.display = 'none';
+            openLoginBtn.style.display = 'flex';
+            openRegistrationBtn.style.display = 'flex';
+            openSendAlertBtn.style.display = 'none';
+            adminControlsCard.style.display = 'none';
+            pinAttempts = 0;
+        }
+
+        function showUserInterface() {
+            guestWelcome.style.display = 'none';
+            userContent.style.display = 'block';
+            currentUserDisplay.style.display = 'flex';
+            openLoginBtn.style.display = 'none';
+            openRegistrationBtn.style.display = 'none';
+            openSendAlertBtn.style.display = 'flex';
+            
+            if (currentUser) {
+                currentUsername.textContent = currentUser.gamerName;
+                updateAdminControls();
+                loadGamers();
+            }
+        }
+
+        function updateAdminControls() {
+            if (currentUser) {
+                adminControlsCard.style.display = 'block';
+            } else {
+                adminControlsCard.style.display = 'none';
+            }
+        }
+
+        function setupRealtimeUpdates() {
+            const gamersRef = collection(db, 'members');
+            onSnapshot(gamersRef, (snapshot) => {
+                loadGamers();
+                updateStats();
+            });
+
+            const alertsRef = collection(db, 'alerts');
+            onSnapshot(alertsRef, (snapshot) => {
+                updateStats();
+                loadAlertLog();
+            });
+
+            const votesRef = collection(db, 'votes');
+            onSnapshot(votesRef, (snapshot) => {
+                checkVoteRemovals();
+            });
+        }
+
+        async function loadGamers() {
+            try {
+                const querySnapshot = await getDocs(collection(db, 'members'));
+                allGamers = [];
+                
+                querySnapshot.forEach((docSnapshot) => {
+                    const gamer = {
+                        id: docSnapshot.id,
+                        ...docSnapshot.data()
+                    };
+                    
+                    if (gamer.totalAlerts && gamer.totalAlerts > 0) {
+                        gamer.avgResponseTime = gamer.totalResponseTime / gamer.totalAlerts;
+                    } else {
+                        gamer.avgResponseTime = null;
+                    }
+                    
+                    allGamers.push(gamer);
+                });
+                
+                renderGamersTable(allGamers);
+                populateSpecificGamerSelect(allGamers);
+                updateRecentGamersList(allGamers);
+            } catch (error) {
+                showNotification('Error', 'Failed to load gamers');
+            }
+        }
+
+        function renderGamersTable(gamers) {
+            gamersTableBody.innerHTML = '';
+            
+            if (gamers.length === 0) {
+                noGamersMessage.style.display = 'block';
+                return;
+            }
+            
+            noGamersMessage.style.display = 'none';
+            
+            gamers.forEach(gamer => {
+                const row = document.createElement('tr');
+                
+                const avgResponseTime = gamer.avgResponseTime ? 
+                    `${Math.round(gamer.avgResponseTime)}s` : 
+                    'N/A';
+                
+                const totalAlerts = gamer.totalAlerts || 0;
+                
+                const isCurrentUser = currentUser && gamer.id === currentUser.id;
+                
+                row.innerHTML = `
+                    <td class="gamer-name-cell" data-id="${gamer.id}" data-name="${gamer.gamerName}">
+                        ${gamer.gamerName}
+                        ${isCurrentUser ? ' <i class="fas fa-user" style="color: var(--info-blue);" title="This is you"></i>' : ''}
+                    </td>
+                    <td>${gamer.alliance}</td>
+                    <td>
+                        <span class="status-indicator ${gamer.status === 'safe' ? 'status-safe' : 'status-attacked'}"></span>
+                        ${gamer.status || 'safe'}
+                    </td>
+                    <td>${totalAlerts}</td>
+                    <td>${avgResponseTime}</td>
+                    <td>
+                        ${currentUser && !isCurrentUser ? `
+                            <div class="quick-action-buttons">
+                                <button class="quick-action-btn quick-attack-btn" data-id="${gamer.id}" data-name="${gamer.gamerName}">
+                                    <i class="fas fa-crosshairs"></i> Attack
+                                </button>
+                                <button class="quick-action-btn quick-reinforce-btn" data-id="${gamer.id}" data-name="${gamer.gamerName}">
+                                    <i class="fas fa-shield-alt"></i> Reinforce
+                                </button>
+                            </div>
+                        ` : '-'}
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            ${isCurrentUser ? `
+                                <button class="action-btn edit-btn" data-id="${gamer.id}">
+                                    <i class="fas fa-edit"></i> Edit Profile
+                                </button>
+                            ` : ''}
+                            ${currentUser && !isCurrentUser ? `
+                                <button class="action-btn alert-btn-small" data-id="${gamer.id}" data-name="${gamer.gamerName}">
+                                    <i class="fas fa-bullhorn"></i> Alert
+                                </button>
+                                <button class="action-btn vote-btn" data-id="${gamer.id}" data-name="${gamer.gamerName}">
+                                    <i class="fas fa-user-slash"></i> Vote Remove
+                                </button>
+                            ` : ''}
+                        </div>
+                    </td>
+                `;
+                
+                gamersTableBody.appendChild(row);
+            });
+            
+            setupTableEventListeners();
+        }
+
+        function setupTableEventListeners() {
+            document.querySelectorAll('.gamer-name-cell').forEach(cell => {
+                cell.addEventListener('click', (e) => {
+                    const gamerId = e.currentTarget.getAttribute('data-id');
+                    const gamerName = e.currentTarget.getAttribute('data-name');
+                    openQuickAlertModal(gamerId, gamerName);
+                });
+            });
+            
+            document.querySelectorAll('.quick-attack-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const gamerId = e.currentTarget.getAttribute('data-id');
+                    const gamerName = e.currentTarget.getAttribute('data-name');
+                    sendQuickAlert(gamerId, gamerName, 'attack');
+                });
+            });
+            
+            document.querySelectorAll('.quick-reinforce-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const gamerId = e.currentTarget.getAttribute('data-id');
+                    const gamerName = e.currentTarget.getAttribute('data-name');
+                    sendQuickAlert(gamerId, gamerName, 'reinforce');
+                });
+            });
+            
+            if (currentUser) {
+                document.querySelectorAll('.edit-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const gamerId = e.currentTarget.getAttribute('data-id');
+                        openEditProfileModal(gamerId);
+                    });
+                });
+                
+                document.querySelectorAll('.alert-btn-small').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const gamerId = e.currentTarget.getAttribute('data-id');
+                        const gamerName = e.currentTarget.getAttribute('data-name');
+                        openQuickAlertModal(gamerId, gamerName);
+                    });
+                });
+                
+                document.querySelectorAll('.vote-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const gamerId = e.currentTarget.getAttribute('data-id');
+                        const gamerName = e.currentTarget.getAttribute('data-name');
+                        openVoteRemoveModal(gamerId, gamerName);
+                    });
+                });
+            }
+        }
+
+        function updateRecentGamersList(gamers) {
+            if (gamers.length === 0) {
+                recentGamersList.style.display = 'none';
+                return;
+            }
+            
+            recentGamersList.style.display = 'block';
+            gamersListContainer.innerHTML = '';
+            
+            const recentGamers = gamers.slice(0, 5);
+            
+            recentGamers.forEach(gamer => {
+                const listItem = document.createElement('div');
+                listItem.className = 'gamer-list-item';
+                
+                listItem.innerHTML = `
+                    <div>
+                        <strong>${gamer.gamerName}</strong>
+                        <div style="font-size: 0.8rem; color: var(--medium-gray);">${gamer.alliance}</div>
+                    </div>
+                    <button class="login-as-btn" data-name="${gamer.gamerName}">
+                        Login
+                    </button>
+                `;
+                
+                gamersListContainer.appendChild(listItem);
+            });
+            
+            document.querySelectorAll('.login-as-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const gamerName = e.currentTarget.getAttribute('data-name');
+                    loginGamerNameInput.value = gamerName;
+                    loginGamerNameInput.focus();
+                });
+            });
+        }
+
+        function showPinPrompt() {
+            return new Promise((resolve) => {
+                const pinModal = document.createElement('div');
+                pinModal.className = 'modal';
+                pinModal.style.display = 'flex';
+                pinModal.innerHTML = `
+                    <div class="modal-content" style="max-width: 320px;">
+                        <h2 class="modal-title"><i class="fas fa-lock"></i> Enter Your PIN</h2>
+                        <div style="text-align: center; padding: 20px;">
+                            <div style="font-size: 3rem; color: var(--primary-red); margin-bottom: 20px;">
+                                <i class="fas fa-user-lock"></i>
+                            </div>
+                            <p style="color: var(--medium-gray); margin-bottom: 20px;">
+                                Enter your 4-digit security PIN
+                            </p>
+                            
+                            <div style="margin-bottom: 25px;">
+                                <div id="pin-display" style="font-size: 2rem; letter-spacing: 15px; 
+                                      color: var(--white); margin-bottom: 10px;">
+                                    _ _ _ _
+                                </div>
+                                <div id="pin-error" style="color: var(--alert-red); font-size: 0.9rem; 
+                                      height: 20px; margin-top: 5px;"></div>
+                            </div>
+                            
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); 
+                                  gap: 10px; max-width: 200px; margin: 0 auto;">
+                                ${[1,2,3,4,5,6,7,8,9].map(num => `
+                                    <button class="pin-btn" data-number="${num}">
+                                        ${num}
+                                    </button>
+                                `).join('')}
+                                <div></div>
+                                <button class="pin-btn" data-number="0">
+                                    0
+                                </button>
+                                <button id="pin-backspace"
+                                    style="padding: 15px; font-size: 1.5rem; 
+                                           background: var(--alert-red); 
+                                           color: var(--white); border: none; 
+                                           border-radius: 50%; cursor: pointer;">
+                                    ←
+                                </button>
+                            </div>
+                            
+                            <div style="margin-top: 25px;">
+                                <button class="form-btn form-btn-secondary" id="cancel-pin">Cancel</button>
+                                <button class="form-btn form-btn-primary" id="submit-pin" disabled>
+                                    Enter
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(pinModal);
+                
+                let pinDigits = [];
+                const pinDisplay = document.getElementById('pin-display');
+                const submitBtn = document.getElementById('submit-pin');
+                const errorDisplay = document.getElementById('pin-error');
+                
+                function updateDisplay() {
+                    const displayArray = [];
+                    for (let i = 0; i < 4; i++) {
+                        displayArray.push(pinDigits[i] || '_');
+                    }
+                    pinDisplay.textContent = displayArray.join(' ');
+                    
+                    submitBtn.disabled = pinDigits.length !== 4;
+                    
+                    errorDisplay.textContent = '';
+                }
+                
+                document.querySelectorAll('.pin-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        if (pinDigits.length < 4) {
+                            pinDigits.push(e.target.getAttribute('data-number'));
+                            updateDisplay();
+                        }
+                    });
+                });
+                
+                document.getElementById('pin-backspace').addEventListener('click', () => {
+                    if (pinDigits.length > 0) {
+                        pinDigits.pop();
+                        updateDisplay();
+                    }
+                });
+                
+                document.getElementById('cancel-pin').addEventListener('click', () => {
+                    document.body.removeChild(pinModal);
+                    resolve(null);
+                });
+                
+                document.getElementById('submit-pin').addEventListener('click', () => {
+                    if (pinDigits.length === 4) {
+                        const pin = pinDigits.join('');
+                        document.body.removeChild(pinModal);
+                        resolve(pin);
+                    }
+                });
+                
+                function handleKeydown(e) {
+                    if (e.key >= '0' && e.key <= '9' && pinDigits.length < 4) {
+                        pinDigits.push(e.key);
+                        updateDisplay();
+                    } else if (e.key === 'Backspace') {
+                        pinDigits.pop();
+                        updateDisplay();
+                    } else if (e.key === 'Enter' && pinDigits.length === 4) {
+                        const pin = pinDigits.join('');
+                        document.body.removeChild(pinModal);
+                        document.removeEventListener('keydown', handleKeydown);
+                        resolve(pin);
+                    }
+                }
+                
+                document.addEventListener('keydown', handleKeydown);
+                
+                pinModal.addEventListener('click', (e) => {
+                    if (e.target === pinModal) {
+                        document.body.removeChild(pinModal);
+                        document.removeEventListener('keydown', handleKeydown);
+                        resolve(null);
+                    }
+                });
+            });
+        }
+
+        async function loginUser(gamerName) {
+            if (!gamerName.trim()) {
+                showNotification('Error', 'Please enter a gamer name');
+                return false;
+            }
+            
+            if (pinAttempts >= MAX_PIN_ATTEMPTS) {
+                showNotification('Error', 'Too many failed attempts. Please try again later.');
+                return false;
+            }
+            
+            try {
+                loginError.style.display = 'none';
+                
+                const gamer = allGamers.find(g => g.gamerName.toLowerCase() === gamerName.toLowerCase().trim());
+                
+                if (!gamer) {
+                    loginError.style.display = 'block';
+                    showNotification('Error', `Gamer "${gamerName}" not found. Please check your name or register as a new user.`);
+                    return false;
+                }
+                
+                const enteredPin = await showPinPrompt();
+                if (!enteredPin) {
+                    return false;
+                }
+                
+                const isValidPin = await verifyPin(enteredPin, gamer.pinHash);
+                
+                if (!isValidPin) {
+                    pinAttempts++;
+                    const remainingAttempts = MAX_PIN_ATTEMPTS - pinAttempts;
+                    if (remainingAttempts > 0) {
+                        showNotification('Error', `Invalid PIN. ${remainingAttempts} attempt(s) remaining.`);
+                    } else {
+                        showNotification('Error', 'Too many failed attempts. Please try again later.');
+                    }
+                    return false;
+                }
+                
+                pinAttempts = 0;
+                
+                currentUser = {
+                    id: gamer.id,
+                    gamerName: gamer.gamerName,
+                    alliance: gamer.alliance,
+                    totalAlerts: gamer.totalAlerts || 0,
+                    totalResponseTime: gamer.totalResponseTime || 0,
+                    status: gamer.status || 'safe'
+                };
+                
+                const savedToken = localStorage.getItem('battleAlertFCMToken');
+                if (savedToken) {
+                    const userRef = doc(db, 'members', currentUser.id);
+                    await updateDoc(userRef, {
+                        fcmToken: savedToken,
+                        lastSeen: serverTimestamp()
+                    });
+                }
+                
+                localStorage.setItem('battleAlertCurrentUser', JSON.stringify({
+                    id: currentUser.id,
+                    gamerName: currentUser.gamerName,
+                    alliance: currentUser.alliance,
+                    lastLogin: new Date().toISOString()
+                }));
+                
+                showUserInterface();
+                loginModal.style.display = 'none';
+                loginGamerNameInput.value = '';
+                loginError.style.display = 'none';
+                updateNotificationStatus();
+                updateAdminControls();
+                
+                showNotification('Success', `Welcome back, ${currentUser.gamerName}!`);
+                return true;
+                
+            } catch (error) {
+                showNotification('Error', 'Failed to login. Please try again.');
+                return false;
+            }
+        }
+
+        function openQuickAlertModal(gamerId, gamerName) {
+            if (!currentUser) {
+                showNotification('Error', 'Please login first');
+                openLoginBtn.click();
+                return;
+            }
+            
+            if (currentUser.id === gamerId) {
+                showNotification('Error', 'You cannot send an alert to yourself');
+                return;
+            }
+            
+            quickAlertGamer = { id: gamerId, name: gamerName };
+            quickAlertRecipient.textContent = gamerName;
+            quickAlertType.value = '';
+            quickAlertMessage.value = '';
+            quickAlertModal.style.display = 'flex';
+        }
+
+        async function sendQuickAlert(gamerId, gamerName, alertType = null) {
+            if (!currentUser) {
+                showNotification('Error', 'Please login first');
+                openLoginBtn.click();
+                return;
+            }
+            
+            if (currentUser.id === gamerId) {
+                showNotification('Error', 'You cannot send an alert to yourself');
+                return;
+            }
+            
+            const finalAlertType = alertType || quickAlertType.value;
+            const message = quickAlertMessage.value.trim();
+            
+            if (!finalAlertType) {
+                showNotification('Error', 'Please select an alert type');
+                return;
+            }
+            
+            try {
+                const alertMessage = finalAlertType === 'attack' 
+                    ? 'You are Under Attack!' + (message ? ` - ${message}` : '')
+                    : 'Reinforcements Needed!' + (message ? ` - ${message}` : '');
+                
+                await addDoc(collection(db, 'alerts'), {
+                    type: finalAlertType,
+                    message: alertMessage,
+                    senderId: currentUser.id,
+                    senderName: currentUser.gamerName,
+                    recipientId: gamerId,
+                    recipientName: gamerName,
+                    createdAt: serverTimestamp(),
+                    respondedAt: null,
+                    alliance: currentUser.alliance
+                });
+
+                const recipientRef = doc(db, 'members', gamerId);
+                await updateDoc(recipientRef, {
+                    status: 'under_attack',
+                    lastAlert: serverTimestamp()
+                });
+
+                showNotification('Success', `Alert sent to ${gamerName}!`);
+                quickAlertModal.style.display = 'none';
+                
+            } catch (error) {
+                showNotification('Error', 'Failed to send alert');
+            }
+        }
+
+        async function loadAlertLog() {
+            try {
+                const q = query(
+                    collection(db, 'alerts'),
+                    orderBy('createdAt', 'desc'),
+                    limit(20)
+                );
+                
+                const querySnapshot = await getDocs(q);
+                const alerts = [];
+                
+                querySnapshot.forEach((doc) => {
+                    alerts.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+                
+                renderAlertLog(alerts);
+            } catch (error) {}
+        }
+
+        function renderAlertLog(alerts) {
+            if (alerts.length === 0) {
+                alertLogContainer.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: var(--medium-gray);">
+                        No alerts sent yet
+                    </div>
+                `;
+                return;
+            }
+            
+            alertLogContainer.innerHTML = '';
+            
+            alerts.forEach(alert => {
+                const logItem = document.createElement('div');
+                logItem.className = 'alert-log-item';
+                
+                const alertType = alert.type === 'attack' ? 'Under Attack!' : 'Reinforcements Needed!';
+                const alertTypeClass = alert.type === 'attack' ? 'alert-log-type-attack' : 'alert-log-type-reinforce';
+                
+                const timeAgo = formatTimeAgo(alert.createdAt.toDate());
+                
+                logItem.innerHTML = `
+                    <span class="alert-log-type ${alertTypeClass}">${alertType}</span>
+                    <span class="alert-log-sender">${alert.senderName}</span>
+                    <span style="color: var(--medium-gray);">alerted</span>
+                    <span class="alert-log-recipient">${alert.recipientName}</span>
+                    <span class="alert-log-time">${timeAgo}</span>
+                    ${alert.message && alert.message.includes('-') ? `
+                        <div style="font-size: 0.8rem; color: var(--medium-gray); margin-top: 5px;">
+                            <i class="fas fa-comment"></i> ${alert.message.split('-')[1].trim()}
+                        </div>
+                    ` : ''}
+                `;
+                
+                alertLogContainer.appendChild(logItem);
+            });
+        }
+
+        function formatTimeAgo(date) {
+            const seconds = Math.floor((new Date() - date) / 1000);
+            
+            let interval = Math.floor(seconds / 31536000);
+            if (interval >= 1) return interval + "y ago";
+            
+            interval = Math.floor(seconds / 2592000);
+            if (interval >= 1) return interval + "mo ago";
+            
+            interval = Math.floor(seconds / 86400);
+            if (interval >= 1) return interval + "d ago";
+            
+            interval = Math.floor(seconds / 3600);
+            if (interval >= 1) return interval + "h ago";
+            
+            interval = Math.floor(seconds / 60);
+            if (interval >= 1) return interval + "m ago";
+            
+            return "just now";
+        }
+
+        async function checkVoteRemovals() {
+            try {
+                const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+                
+                const votesSnapshot = await getDocs(collection(db, 'votes'));
+                const votesByGamer = {};
+                
+                votesSnapshot.forEach(doc => {
+                    const vote = doc.data();
+                    if (vote.createdAt.toDate() >= twentyFourHoursAgo) {
+                        if (!votesByGamer[vote.targetGamerId]) {
+                            votesByGamer[vote.targetGamerId] = [];
+                        }
+                        votesByGamer[vote.targetGamerId].push({
+                            id: doc.id,
+                            ...vote
+                        });
+                    }
+                });
+                
+                for (const [gamerId, votes] of Object.entries(votesByGamer)) {
+                    if (votes.length >= 5) {
+                        await deleteDoc(doc(db, 'members', gamerId));
+                        
+                        for (const vote of votes) {
+                            await deleteDoc(doc(db, 'votes', vote.id));
+                        }
+                        
+                        showNotification('System', `Gamer removed by community vote (5 votes in 24 hours)`);
+                        
+                        if (currentUser && currentUser.id === gamerId) {
+                            logout();
+                        }
+                    }
+                }
+            } catch (error) {}
+        }
+
+        async function checkForActiveAlerts() {
+            try {
+                if (!currentUser) return;
+                
+                const q = query(
+                    collection(db, 'alerts'),
+                    where('recipientId', '==', currentUser.id),
+                    where('respondedAt', '==', null)
+                );
+                
+                const querySnapshot = await getDocs(q);
+                
+                if (!querySnapshot.empty) {
+                    const alertDoc = querySnapshot.docs[0];
+                    currentAlert = {
+                        id: alertDoc.id,
+                        ...alertDoc.data()
+                    };
+                    showActiveAlert(currentAlert);
+                }
+            } catch (error) {}
+        }
+
+        function showActiveAlert(alert) {
+            document.getElementById('alert-type-display').textContent = 
+                alert.type === 'attack' ? 'Under Attack!' : 'Reinforcements Needed!';
+            
+            document.getElementById('alert-message-display').textContent = alert.message;
+            document.getElementById('alert-sender-display').textContent = `From: ${alert.senderName}`;
+            
+            const timeDiff = Math.floor((new Date() - alert.createdAt.toDate()) / 1000);
+            const timeText = timeDiff < 60 ? 'Just now' : 
+                           timeDiff < 120 ? '1 minute ago' : 
+                           `${Math.floor(timeDiff / 60)} minutes ago`;
+            
+            document.getElementById('alert-time-display').textContent = `Time: ${timeText}`;
+            activeAlertModal.style.display = 'flex';
+        }
+
+        async function markAlertAsResponded(alertId) {
+            try {
+                const alertRef = doc(db, 'alerts', alertId);
+                await updateDoc(alertRef, {
+                    respondedAt: serverTimestamp()
+                });
+                
+                if (currentUser) {
+                    const gamer = allGamers.find(g => g.id === currentUser.id);
+                    if (gamer) {
+                        const totalAlerts = (gamer.totalAlerts || 0) + 1;
+                        const responseTime = Math.floor((new Date() - currentAlert.createdAt.toDate()) / 1000);
+                        const totalResponseTime = (gamer.totalResponseTime || 0) + responseTime;
+                        
+                        const gamerRef = doc(db, 'members', currentUser.id);
+                        await updateDoc(gamerRef, {
+                            totalAlerts: totalAlerts,
+                            totalResponseTime: totalResponseTime,
+                            status: 'safe'
+                        });
+                    }
+                }
+                
+                showNotification('Success', 'Alert marked as received!');
+                currentAlert = null;
+            } catch (error) {
+                showNotification('Error', 'Failed to update alert status');
+            }
+        }
+
+        function openEditProfileModal(gamerId) {
+            if (!currentUser || gamerId !== currentUser.id) {
+                showNotification('Error', 'You can only edit your own profile');
+                return;
+            }
+            
+            document.getElementById('edit-gamer-name').value = currentUser.gamerName;
+            
+            if (currentUser.alliance === 'FTroop') {
+                document.getElementById('edit-alliance-name').value = 'FTroop';
+                editCustomAllianceGroup.style.display = 'none';
+            } else {
+                document.getElementById('edit-alliance-name').value = 'custom';
+                document.getElementById('edit-custom-alliance').value = currentUser.alliance;
+                editCustomAllianceGroup.style.display = 'block';
+            }
+            
+            editProfileModal.style.display = 'flex';
+        }
+
+        function openVoteRemoveModal(gamerId, gamerName) {
+            if (!currentUser) {
+                showNotification('Error', 'Please login first');
+                openLoginBtn.click();
+                return;
+            }
+            
+            if (gamerId === currentUser.id) {
+                showNotification('Error', 'You cannot vote to remove yourself');
+                return;
+            }
+            
+            currentVoteGamer = { id: gamerId, name: gamerName };
+            voteGamerName.textContent = gamerName;
+            voteReasonTextarea.value = '';
+            currentVotesContainer.style.display = 'none';
+            
+            checkExistingVotes(gamerId);
+            
+            voteRemoveModal.style.display = 'flex';
+        }
+
+        async function checkExistingVotes(gamerId) {
+            try {
+                const q = query(
+                    collection(db, 'votes'),
+                    where('targetGamerId', '==', gamerId)
+                );
+                
+                const querySnapshot = await getDocs(q);
+                const votes = [];
+                
+                querySnapshot.forEach(doc => {
+                    votes.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+                
+                if (votes.length > 0) {
+                    renderExistingVotes(votes);
+                    currentVotesContainer.style.display = 'block';
+                }
+            } catch (error) {}
+        }
+
+        function renderExistingVotes(votes) {
+            votesList.innerHTML = '';
+            
+            votes.forEach(vote => {
+                const voteItem = document.createElement('div');
+                voteItem.className = 'vote-item';
+                
+                const timeAgo = formatTimeAgo(vote.createdAt.toDate());
+                const isCurrentUserVote = vote.voterId === currentUser.id;
+                
+                voteItem.innerHTML = `
+                    <div>
+                        <strong>${vote.voterName}</strong>
+                        ${isCurrentUserVote ? ' <i class="fas fa-user" style="color: var(--info-blue);" title="Your vote"></i>' : ''}
+                        <div style="font-size: 0.8rem; color: var(--medium-gray);">${vote.reason}</div>
+                    </div>
+                    <div style="color: var(--medium-gray); font-size: 0.8rem;">${timeAgo}</div>
+                `;
+                
+                votesList.appendChild(voteItem);
+            });
+        }
+
+        async function changePin(currentPin, newPin) {
+            try {
+                const userDoc = await getDocs(query(
+                    collection(db, 'members'),
+                    where('gamerName', '==', currentUser.gamerName)
+                ));
+                
+                if (userDoc.empty) {
+                    showNotification('Error', 'User not found');
+                    return false;
+                }
+                
+                const userData = userDoc.docs[0].data();
+                
+                const isValidCurrentPin = await verifyPin(currentPin, userData.pinHash);
+                if (!isValidCurrentPin) {
+                    showNotification('Error', 'Current PIN is incorrect');
+                    return false;
+                }
+                
+                const newPinHash = await hashPin(newPin);
+                
+                const userRef = doc(db, 'members', currentUser.id);
+                await updateDoc(userRef, {
+                    pinHash: newPinHash
+                });
+                
+                return true;
+            } catch (error) {
+                showNotification('Error', 'Failed to change PIN');
+                return false;
+            }
+        }
+
+        async function clearMyAlerts() {
+            if (!currentUser) return;
+            
+            try {
+                const q = query(
+                    collection(db, 'alerts'),
+                    where('recipientId', '==', currentUser.id)
+                );
+                
+                const querySnapshot = await getDocs(q);
+                const batch = writeBatch(db);
+                
+                querySnapshot.forEach((doc) => {
+                    batch.delete(doc.ref);
+                });
+                
+                await batch.commit();
+                
+                const userRef = doc(db, 'members', currentUser.id);
+                await updateDoc(userRef, {
+                    totalAlerts: 0,
+                    totalResponseTime: 0,
+                    status: 'safe'
+                });
+                
+                showNotification('Success', 'Your alerts have been cleared!');
+            } catch (error) {
+                showNotification('Error', 'Failed to clear alerts');
+            }
+        }
+
+        async function clearAllAlertLogs() {
+            try {
+                const querySnapshot = await getDocs(collection(db, 'alerts'));
+                const batch = writeBatch(db);
+                
+                querySnapshot.forEach((doc) => {
+                    batch.delete(doc.ref);
+                });
+                
+                await batch.commit();
+                
+                showNotification('Success', 'All alert logs have been cleared!');
+            } catch (error) {
+                showNotification('Error', 'Failed to clear alert logs');
+            }
+        }
+
+        async function resetStatistics() {
+            try {
+                const alertsSnapshot = await getDocs(collection(db, 'alerts'));
+                const batch = writeBatch(db);
+                
+                alertsSnapshot.forEach((doc) => {
+                    batch.delete(doc.ref);
+                });
+                
+                await batch.commit();
+                
+                const gamersSnapshot = await getDocs(collection(db, 'members'));
+                const updateBatch = writeBatch(db);
+                
+                gamersSnapshot.forEach((doc) => {
+                    const gamerRef = doc.ref;
+                    updateBatch.update(gamerRef, {
+                        totalAlerts: 0,
+                        totalResponseTime: 0,
+                        status: 'safe',
+                        lastAlert: null
+                    });
+                });
+                
+                await updateBatch.commit();
+                
+                showNotification('Success', 'All statistics have been reset!');
+            } catch (error) {
+                showNotification('Error', 'Failed to reset statistics');
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            localStorage.removeItem('battleAlertCurrentUser');
+            showGuestInterface();
+            showNotification('Info', 'Logged out successfully');
+        }
+
+        function showUserProfile() {
+            if (!currentUser) return;
+            
+            const modalContent = `
+                <div style="text-align: center; padding: 20px;">
+                    <div style="font-size: 3rem; color: var(--primary-red); margin-bottom: 20px;">
+                        <i class="fas fa-user-circle"></i>
+                    </div>
+                    <h3 style="color: var(--white); margin-bottom: 10px;">${currentUser.gamerName}</h3>
+                    <div style="background-color: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 5px; margin: 15px 0;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                            <span style="color: var(--medium-gray);">Alliance:</span>
+                            <span style="color: var(--white); font-weight: bold;">${currentUser.alliance}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                            <span style="color: var(--medium-gray);">Alerts Received:</span>
+                            <span style="color: var(--white); font-weight: bold;">${currentUser.totalAlerts || 0}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                            <span style="color: var(--medium-gray);">Avg Response Time:</span>
+                            <span style="color: var(--white); font-weight: bold;">
+                                ${currentUser.avgResponseTime ? Math.round(currentUser.avgResponseTime) + 's' : 'N/A'}
+                            </span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--medium-gray);">Status:</span>
+                            <span style="color: ${currentUser.status === 'safe' ? 'var(--success-green)' : 'var(--alert-red)'}; font-weight: bold;">
+                                ${currentUser.status || 'safe'}
+                            </span>
+                        </div>
+                    </div>
+                    <p style="color: var(--medium-gray); font-size: 0.9rem;">
+                        Member since: ${currentUser.joinDate ? currentUser.joinDate.toDate().toLocaleDateString() : 'Recently'}
+                    </p>
+                </div>
+            `;
+            
+            const tempModal = document.createElement('div');
+            tempModal.className = 'modal';
+            tempModal.style.display = 'flex';
+            tempModal.innerHTML = `
+                <div class="modal-content">
+                    <h2 class="modal-title"><i class="fas fa-user"></i> My Profile</h2>
+                    ${modalContent}
+                    <div class="form-actions">
+                        <button type="button" class="form-btn form-btn-primary" id="close-profile-modal">Close</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(tempModal);
+            
+            tempModal.addEventListener('click', (e) => {
+                if (e.target === tempModal || e.target.id === 'close-profile-modal') {
+                    document.body.removeChild(tempModal);
+                }
+            });
+        }
+
+        function populateSpecificGamerSelect(gamers) {
+            const specificGamerSelect = document.getElementById('specific-gamer');
+            specificGamerSelect.innerHTML = '<option value="">Select a gamer</option>';
+            
+            gamers.forEach(gamer => {
+                if (currentUser && gamer.id === currentUser.id) return;
+                
+                const option = document.createElement('option');
+                option.value = gamer.id;
+                option.textContent = `${gamer.gamerName} (${gamer.alliance})`;
+                specificGamerSelect.appendChild(option);
+            });
+        }
+
+        function filterAndSortGamers() {
+            let filteredGamers = [...allGamers];
+            
+            const searchTerm = searchGamersInput.value.toLowerCase();
+            if (searchTerm) {
+                filteredGamers = filteredGamers.filter(gamer => 
+                    gamer.gamerName.toLowerCase().includes(searchTerm) ||
+                    gamer.alliance.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            const allianceFilter = filterAllianceSelect.value;
+            if (allianceFilter) {
+                filteredGamers = filteredGamers.filter(gamer => 
+                    gamer.alliance === allianceFilter
+                );
+            }
+            
+            const sortValue = sortGamersSelect.value;
+            filteredGamers.sort((a, b) => {
+                switch (sortValue) {
+                    case 'name-asc':
+                        return a.gamerName.localeCompare(b.gamerName);
+                    case 'name-desc':
+                        return b.gamerName.localeCompare(a.gamerName);
+                    case 'alliance-asc':
+                        return a.alliance.localeCompare(b.alliance);
+                    case 'alliance-desc':
+                        return b.alliance.localeCompare(a.alliance);
+                    case 'alerts-asc':
+                        return (a.totalAlerts || 0) - (b.totalAlerts || 0);
+                    case 'alerts-desc':
+                        return (b.totalAlerts || 0) - (a.totalAlerts || 0);
+                    default:
+                        return 0;
+                }
+            });
+            
+            renderGamersTable(filteredGamers);
+        }
+
+        async function updateStats() {
+            try {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                
+                const gamersSnapshot = await getDocs(collection(db, 'members'));
+                const gamersCount = gamersSnapshot.size;
+                activeGamersElement.textContent = gamersCount;
+                
+                const alertsSnapshot = await getDocs(collection(db, 'alerts'));
+                let todayAlerts = 0;
+                let totalAlerts = 0;
+                let todayTotalResponseTime = 0;
+                let totalResponseTime = 0;
+                let respondedAlerts = 0;
+                
+                alertsSnapshot.forEach(doc => {
+                    const alert = doc.data();
+                    totalAlerts++;
+                    
+                    if (alert.respondedAt) {
+                        respondedAlerts++;
+                        
+                        const responseTime = (alert.respondedAt.toDate() - alert.createdAt.toDate()) / 1000;
+                        totalResponseTime += responseTime;
+                        
+                        if (alert.createdAt.toDate() >= today) {
+                            todayAlerts++;
+                            todayTotalResponseTime += responseTime;
+                        }
+                    }
+                });
+                
+                todayAlertsElement.textContent = todayAlerts;
+                if (todayAlerts > 0) {
+                    todayResponseTimeElement.textContent = `Avg Response: ${Math.round(todayTotalResponseTime / todayAlerts)}s`;
+                } else {
+                    todayResponseTimeElement.textContent = 'Avg Response: N/A';
+                }
+                
+                totalAlertsElement.textContent = totalAlerts;
+                if (totalAlerts > 0) {
+                    totalResponseTimeElement.textContent = `Avg Response: ${Math.round(totalResponseTime / totalAlerts)}s`;
+                    responseRateElement.textContent = `${Math.round((respondedAlerts / totalAlerts) * 100)}%`;
+                } else {
+                    totalResponseTimeElement.textContent = 'Avg Response: N/A';
+                    responseRateElement.textContent = '0%';
+                }
+                
+            } catch (error) {}
+        }
+
+        function showNotification(title, message) {
+            notificationText.textContent = `${title}: ${message}`;
+            notificationElement.style.display = 'flex';
+
+            setTimeout(() => {
+                notificationElement.style.display = 'none';
+            }, 5000);
+        }
+
+        function setupEventListeners() {
+            openLoginBtn.addEventListener('click', () => {
+                loginModal.style.display = 'flex';
+                loginGamerNameInput.focus();
+            });
+
+            loginFromWelcomeBtn.addEventListener('click', () => {
+                loginModal.style.display = 'flex';
+                loginGamerNameInput.focus();
+            });
+
+            cancelLoginBtn.addEventListener('click', () => {
+                loginModal.style.display = 'none';
+                loginGamerNameInput.value = '';
+                loginError.style.display = 'none';
+            });
+
+            loginModal.addEventListener('click', (e) => {
+                if (e.target === loginModal) {
+                    loginModal.style.display = 'none';
+                    loginGamerNameInput.value = '';
+                    loginError.style.display = 'none';
+                }
+            });
+
+            submitLoginBtn.addEventListener('click', async () => {
+                const gamerName = loginGamerNameInput.value.trim();
+                await loginUser(gamerName);
+            });
+
+            loginGamerNameInput.addEventListener('keypress', async (e) => {
+                if (e.key === 'Enter') {
+                    const gamerName = loginGamerNameInput.value.trim();
+                    await loginUser(gamerName);
+                }
+            });
+
+            switchToRegisterBtn.addEventListener('click', () => {
+                loginModal.style.display = 'none';
+                registrationModal.style.display = 'flex';
+            });
+
+            openRegistrationBtn.addEventListener('click', () => {
+                registrationModal.style.display = 'flex';
+            });
+
+            registerFromWelcomeBtn.addEventListener('click', () => {
+                registrationModal.style.display = 'flex';
+            });
+
+            cancelRegistrationBtn.addEventListener('click', () => {
+                registrationModal.style.display = 'none';
+                registrationForm.reset();
+                customAllianceGroup.style.display = 'none';
+                nameError.style.display = 'none';
+                pinError.style.display = 'none';
+            });
+
+            registrationModal.addEventListener('click', (e) => {
+                if (e.target === registrationModal) {
+                    registrationModal.style.display = 'none';
+                    registrationForm.reset();
+                    customAllianceGroup.style.display = 'none';
+                    nameError.style.display = 'none';
+                    pinError.style.display = 'none';
+                }
+            });
+
+            allianceSelect.addEventListener('change', (e) => {
+                if (e.target.value === 'custom') {
+                    customAllianceGroup.style.display = 'block';
+                } else {
+                    customAllianceGroup.style.display = 'none';
+                }
+            });
+
+            registrationForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const gamerName = document.getElementById('gamer-name').value.trim();
+                const pin = document.getElementById('gamer-pin').value;
+                const confirmPin = document.getElementById('confirm-pin').value;
+                const alliance = document.getElementById('alliance-name').value;
+                const customAlliance = document.getElementById('custom-alliance').value.trim();
+
+                nameError.style.display = 'none';
+                pinError.style.display = 'none';
+
+                if (!pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+                    showNotification('Error', 'Please enter a valid 4-digit PIN');
+                    return;
+                }
+                
+                if (pin !== confirmPin) {
+                    pinError.style.display = 'block';
+                    showNotification('Error', 'PINs do not match');
+                    return;
+                }
+                
+                if (!gamerName) {
+                    showNotification('Error', 'Please enter a gamer name');
+                    return;
+                }
+
+                const nameExists = await checkGamerNameExists(gamerName);
+                if (nameExists) {
+                    nameError.style.display = 'block';
+                    showNotification('Error', `Gamer name "${gamerName}" is already taken. Please choose another.`);
+                    return;
+                }
+
+                let finalAlliance = alliance;
+                if (alliance === 'custom') {
+                    if (!customAlliance) {
+                        showNotification('Error', 'Please enter a custom alliance name');
+                        return;
+                    }
+                    finalAlliance = customAlliance;
+                }
+
+                try {
+                    const pinHash = await hashPin(pin);
+                    
+                    const docRef = await addDoc(collection(db, 'members'), {
+                        gamerName: gamerName,
+                        alliance: finalAlliance,
+                        pinHash: pinHash,
+                        joinDate: serverTimestamp(),
+                        status: 'safe',
+                        lastAlert: null,
+                        totalAlerts: 0,
+                        totalResponseTime: 0,
+                        fcmToken: localStorage.getItem('battleAlertFCMToken')
+                    });
+
+                    currentUser = {
+                        id: docRef.id,
+                        gamerName: gamerName,
+                        alliance: finalAlliance
+                    };
+
+                    localStorage.setItem('battleAlertCurrentUser', JSON.stringify({
+                        gamerName: currentUser.gamerName,
+                        id: currentUser.id
+                    }));
+
+                    showNotification('Success', `${gamerName} has been successfully registered!`);
+                    showUserInterface();
+                    registrationForm.reset();
+                    customAllianceGroup.style.display = 'none';
+                    updateNotificationStatus();
+                    updateAdminControls();
+                    
+                    setTimeout(() => {
+                        registrationModal.style.display = 'none';
+                    }, 2000);
+                } catch (error) {
+                    showNotification('Error', 'Failed to register gamer');
+                }
+            });
+
+            editAllianceSelect.addEventListener('change', (e) => {
+                if (e.target.value === 'custom') {
+                    editCustomAllianceGroup.style.display = 'block';
+                } else {
+                    editCustomAllianceGroup.style.display = 'none';
+                }
+            });
+
+            cancelEditBtn.addEventListener('click', () => {
+                editProfileModal.style.display = 'none';
+                editProfileForm.reset();
+                editCustomAllianceGroup.style.display = 'none';
+                editNameError.style.display = 'none';
+            });
+
+            editProfileModal.addEventListener('click', (e) => {
+                if (e.target === editProfileModal) {
+                    editProfileModal.style.display = 'none';
+                    editProfileForm.reset();
+                    editCustomAllianceGroup.style.display = 'none';
+                    editNameError.style.display = 'none';
+                }
+            });
+
+            editProfileForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const gamerName = document.getElementById('edit-gamer-name').value.trim();
+                const alliance = document.getElementById('edit-alliance-name').value;
+                const customAlliance = document.getElementById('edit-custom-alliance').value.trim();
+
+                editNameError.style.display = 'none';
+
+                if (!gamerName) {
+                    showNotification('Error', 'Please enter a gamer name');
+                    return;
+                }
+
+                if (gamerName !== currentUser.gamerName) {
+                    const nameExists = await checkGamerNameExists(gamerName);
+                    if (nameExists) {
+                        editNameError.style.display = 'block';
+                        showNotification('Error', `Gamer name "${gamerName}" is already taken. Please choose another.`);
+                        return;
+                    }
+                }
+
+                let finalAlliance = alliance;
+                if (alliance === 'custom') {
+                    if (!customAlliance) {
+                        showNotification('Error', 'Please enter a custom alliance name');
+                        return;
+                    }
+                    finalAlliance = customAlliance;
+                }
+
+                try {
+                    const userRef = doc(db, 'members', currentUser.id);
+                    await updateDoc(userRef, {
+                        gamerName: gamerName,
+                        alliance: finalAlliance
+                    });
+
+                    currentUser.gamerName = gamerName;
+                    currentUser.alliance = finalAlliance;
+                    currentUsername.textContent = gamerName;
+
+                    localStorage.setItem('battleAlertCurrentUser', JSON.stringify({
+                        gamerName: currentUser.gamerName,
+                        id: currentUser.id
+                    }));
+
+                    showNotification('Success', 'Profile updated successfully!');
+                    editProfileModal.style.display = 'none';
+                    editProfileForm.reset();
+                    editCustomAllianceGroup.style.display = 'none';
+                } catch (error) {
+                    showNotification('Error', 'Failed to update profile');
+                }
+            });
+
+            openSendAlertBtn.addEventListener('click', () => {
+                if (!currentUser) {
+                    showNotification('Error', 'Please login first');
+                    openLoginBtn.click();
+                    return;
+                }
+                sendAlertModal.style.display = 'flex';
+            });
+
+            cancelAlertBtn.addEventListener('click', () => {
+                sendAlertModal.style.display = 'none';
+                sendAlertForm.reset();
+                specificGamerGroup.style.display = 'none';
+            });
+
+            sendAlertModal.addEventListener('click', (e) => {
+                if (e.target === sendAlertModal) {
+                    sendAlertModal.style.display = 'none';
+                    sendAlertForm.reset();
+                    specificGamerGroup.style.display = 'none';
+                }
+            });
+
+            recipientSelect.addEventListener('change', (e) => {
+                if (e.target.value === 'specific') {
+                    specificGamerGroup.style.display = 'block';
+                    populateSpecificGamerSelect(allGamers);
+                } else {
+                    specificGamerGroup.style.display = 'none';
+                }
+            });
+
+            sendAlertForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const alertType = document.getElementById('alert-type').value;
+                const recipientType = document.getElementById('alert-recipient').value;
+                const specificGamerId = document.getElementById('specific-gamer').value;
+                const message = document.getElementById('alert-message').value.trim();
+
+                if (!alertType || !recipientType) {
+                    showNotification('Error', 'Please fill in all required fields');
+                    return;
+                }
+
+                try {
+                    let recipients = [];
+                    
+                    if (recipientType === 'all') {
+                        recipients = allGamers.filter(g => g.id !== currentUser.id);
+                    } else if (recipientType === 'alliance') {
+                        recipients = allGamers.filter(g => g.alliance === currentUser.alliance && g.id !== currentUser.id);
+                    } else if (recipientType === 'specific') {
+                        if (!specificGamerId) {
+                            showNotification('Error', 'Please select a gamer');
+                            return;
+                        }
+                        const gamer = allGamers.find(g => g.id === specificGamerId);
+                        if (gamer) recipients = [gamer];
+                    }
+
+                    if (recipients.length === 0) {
+                        showNotification('Error', 'No recipients found');
+                        return;
+                    }
+
+                    for (const recipient of recipients) {
+                        const alertMessage = alertType === 'attack' 
+                            ? 'You are Under Attack!' + (message ? ` - ${message}` : '')
+                            : 'Reinforcements Needed!' + (message ? ` - ${message}` : '');
+                        
+                        await addDoc(collection(db, 'alerts'), {
+                            type: alertType,
+                            message: alertMessage,
+                            senderId: currentUser.id,
+                            senderName: currentUser.gamerName,
+                            recipientId: recipient.id,
+                            recipientName: recipient.gamerName,
+                            createdAt: serverTimestamp(),
+                            respondedAt: null,
+                            alliance: recipient.alliance
+                        });
+
+                        const recipientRef = doc(db, 'members', recipient.id);
+                        await updateDoc(recipientRef, {
+                            status: 'under_attack',
+                            lastAlert: serverTimestamp()
+                        });
+                    }
+
+                    showNotification('Success', `Alert sent to ${recipients.length} gamer(s)`);
+                    sendAlertModal.style.display = 'none';
+                    sendAlertForm.reset();
+                    specificGamerGroup.style.display = 'none';
+                } catch (error) {
+                    showNotification('Error', 'Failed to send alert');
+                }
+            });
+
+            activeAlertModal.addEventListener('click', (e) => {
+                if (e.target === activeAlertModal) {
+                    activeAlertModal.style.display = 'none';
+                }
+            });
+
+            gotItBtn.addEventListener('click', async () => {
+                if (currentAlert) {
+                    await markAlertAsResponded(currentAlert.id);
+                    activeAlertModal.style.display = 'none';
+                }
+            });
+
+            cancelVoteBtn.addEventListener('click', () => {
+                voteRemoveModal.style.display = 'none';
+                currentVoteGamer = null;
+            });
+
+            voteRemoveModal.addEventListener('click', (e) => {
+                if (e.target === voteRemoveModal) {
+                    voteRemoveModal.style.display = 'none';
+                    currentVoteGamer = null;
+                }
+            });
+
+            submitVoteBtn.addEventListener('click', async () => {
+                if (!currentVoteGamer) return;
+                
+                const reason = voteReasonTextarea.value.trim();
+                if (!reason) {
+                    showNotification('Error', 'Please provide a reason for removal');
+                    return;
+                }
+
+                try {
+                    const existingVoteQuery = query(
+                        collection(db, 'votes'),
+                        where('targetGamerId', '==', currentVoteGamer.id),
+                        where('voterId', '==', currentUser.id)
+                    );
+                    
+                    const existingVote = await getDocs(existingVoteQuery);
+                    if (!existingVote.empty) {
+                        showNotification('Error', 'You have already voted to remove this gamer');
+                        return;
+                    }
+
+                    await addDoc(collection(db, 'votes'), {
+                        targetGamerId: currentVoteGamer.id,
+                        targetGamerName: currentVoteGamer.name,
+                        voterId: currentUser.id,
+                        voterName: currentUser.gamerName,
+                        reason: reason,
+                        createdAt: serverTimestamp()
+                    });
+
+                    showNotification('Success', 'Vote submitted successfully!');
+                    voteRemoveModal.style.display = 'none';
+                    currentVoteGamer = null;
+                } catch (error) {
+                    showNotification('Error', 'Failed to submit vote');
+                }
+            });
+
+            cancelQuickAlertBtn.addEventListener('click', () => {
+                quickAlertModal.style.display = 'none';
+                quickAlertGamer = null;
+            });
+
+            quickAlertModal.addEventListener('click', (e) => {
+                if (e.target === quickAlertModal) {
+                    quickAlertModal.style.display = 'none';
+                    quickAlertGamer = null;
+                }
+            });
+
+            sendQuickAlertBtn.addEventListener('click', async () => {
+                if (!quickAlertGamer) return;
+                await sendQuickAlert(quickAlertGamer.id, quickAlertGamer.name);
+            });
+
+            changePinBtn.addEventListener('click', () => {
+                if (!currentUser) return;
+                changePinModal.style.display = 'flex';
+            });
+
+            cancelPinChangeBtn.addEventListener('click', () => {
+                changePinModal.style.display = 'none';
+                document.getElementById('current-pin').value = '';
+                document.getElementById('new-pin').value = '';
+                document.getElementById('confirm-new-pin').value = '';
+                newPinError.style.display = 'none';
+            });
+
+            changePinModal.addEventListener('click', (e) => {
+                if (e.target === changePinModal) {
+                    changePinModal.style.display = 'none';
+                    document.getElementById('current-pin').value = '';
+                    document.getElementById('new-pin').value = '';
+                    document.getElementById('confirm-new-pin').value = '';
+                    newPinError.style.display = 'none';
+                }
+            });
+
+            submitPinChangeBtn.addEventListener('click', async () => {
+                const currentPin = document.getElementById('current-pin').value;
+                const newPin = document.getElementById('new-pin').value;
+                const confirmNewPin = document.getElementById('confirm-new-pin').value;
+
+                if (!newPin || newPin.length !== 4 || !/^\d{4}$/.test(newPin)) {
+                    showNotification('Error', 'Please enter a valid 4-digit new PIN');
+                    return;
+                }
+                
+                if (newPin !== confirmNewPin) {
+                    newPinError.style.display = 'block';
+                    showNotification('Error', 'New PINs do not match');
+                    return;
+                }
+                
+                newPinError.style.display = 'none';
+
+                const success = await changePin(currentPin, newPin);
+                if (success) {
+                    showNotification('Success', 'PIN changed successfully!');
+                    changePinModal.style.display = 'none';
+                    document.getElementById('current-pin').value = '';
+                    document.getElementById('new-pin').value = '';
+                    document.getElementById('confirm-new-pin').value = '';
+                } else {
+                    showNotification('Error', 'Failed to change PIN');
+                }
+            });
+
+            clearMyAlertsBtn.addEventListener('click', async () => {
+                profileDropdownMenu.classList.remove('show');
+                if (confirm('Are you sure you want to clear all your alerts? This cannot be undone.')) {
+                    await clearMyAlerts();
+                }
+            });
+
+            profileBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                profileDropdownMenu.classList.toggle('show');
+            });
+
+            document.addEventListener('click', () => {
+                profileDropdownMenu.classList.remove('show');
+            });
+
+            viewProfileBtn.addEventListener('click', () => {
+                profileDropdownMenu.classList.remove('show');
+                showUserProfile();
+            });
+
+            editProfileHeaderBtn.addEventListener('click', () => {
+                profileDropdownMenu.classList.remove('show');
+                openEditProfileModal(currentUser.id);
+            });
+
+            logoutHeaderBtn.addEventListener('click', () => {
+                profileDropdownMenu.classList.remove('show');
+                logout();
+            });
+
+            clearAllAlertsBtn.addEventListener('click', () => {
+                clearAlertsModal.style.display = 'flex';
+            });
+
+            resetStatsBtn.addEventListener('click', () => {
+                resetStatsModal.style.display = 'flex';
+            });
+
+            cancelClearAlertsBtn.addEventListener('click', () => {
+                clearAlertsModal.style.display = 'none';
+                confirmClearCheckbox.checked = false;
+                confirmClearAlertsBtn.disabled = true;
+            });
+
+            clearAlertsModal.addEventListener('click', (e) => {
+                if (e.target === clearAlertsModal) {
+                    clearAlertsModal.style.display = 'none';
+                    confirmClearCheckbox.checked = false;
+                    confirmClearAlertsBtn.disabled = true;
+                }
+            });
+
+            confirmClearCheckbox.addEventListener('change', () => {
+                confirmClearAlertsBtn.disabled = !confirmClearCheckbox.checked;
+            });
+
+            confirmClearAlertsBtn.addEventListener('click', async () => {
+                await clearAllAlertLogs();
+                clearAlertsModal.style.display = 'none';
+                confirmClearCheckbox.checked = false;
+                confirmClearAlertsBtn.disabled = true;
+            });
+
+            cancelResetStatsBtn.addEventListener('click', () => {
+                resetStatsModal.style.display = 'none';
+                confirmResetCheckbox.checked = false;
+                confirmResetStatsBtn.disabled = true;
+            });
+
+            resetStatsModal.addEventListener('click', (e) => {
+                if (e.target === resetStatsModal) {
+                    resetStatsModal.style.display = 'none';
+                    confirmResetCheckbox.checked = false;
+                    confirmResetStatsBtn.disabled = true;
+                }
+            });
+
+            confirmResetCheckbox.addEventListener('change', () => {
+                confirmResetStatsBtn.disabled = !confirmResetCheckbox.checked;
+            });
+
+            confirmResetStatsBtn.addEventListener('click', async () => {
+                await resetStatistics();
+                resetStatsModal.style.display = 'none';
+                confirmResetCheckbox.checked = false;
+                confirmResetStatsBtn.disabled = true;
+            });
+
+            searchGamersInput.addEventListener('input', filterAndSortGamers);
+            filterAllianceSelect.addEventListener('change', filterAndSortGamers);
+            sortGamersSelect.addEventListener('change', filterAndSortGamers);
+
+            document.querySelectorAll('#gamers-table th[data-sort]').forEach(th => {
+                th.addEventListener('click', () => {
+                    const sortField = th.getAttribute('data-sort');
+                    const currentSort = sortGamersSelect.value;
+                    
+                    if (currentSort.startsWith(sortField)) {
+                        if (currentSort.endsWith('asc')) {
+                            sortGamersSelect.value = `${sortField}-desc`;
+                        } else {
+                            sortGamersSelect.value = `${sortField}-asc`;
+                        }
+                    } else {
+                        sortGamersSelect.value = `${sortField}-asc`;
+                    }
+                    
+                    filterAndSortGamers();
+                });
+            });
+
+            enableNotificationsBtn.addEventListener('click', requestNotificationPermission);
+            testNotificationBtn.addEventListener('click', testNotification);
+        }
+    </script>
+</body>
+</html>
