@@ -1644,20 +1644,17 @@
                     
                     if (gamer) {
                         // User found - we need to verify they have access
-                        // We'll set currentUser but mark it as needing revalidation
                         currentUser = {
                             id: gamer.id,
                             gamerName: gamer.gamerName,
                             alliance: gamer.alliance,
                             totalAlerts: gamer.totalAlerts || 0,
                             totalResponseTime: gamer.totalResponseTime || 0,
-                            status: gamer.status || 'safe',
-                            needsRevalidation: true // Flag that user needs to re-enter PIN on next action
+                            status: gamer.status || 'safe'
                         };
                         
-                        // Show user interface but don't allow actions until PIN is verified
                         showUserInterface();
-                        showNotification('Welcome Back', `Welcome back, ${currentUser.gamerName}! Please verify your PIN for secure actions.`);
+                        showNotification('Welcome Back', `Welcome back, ${currentUser.gamerName}!`);
                         updateNotificationStatus();
                         updateAdminControls();
                     } else {
@@ -2310,11 +2307,11 @@
 
         async function checkGamerNameExists(gamerName) {
             try {
-                // First check the already-loaded allGamers array
-                const existsInArray = allGamers.some(g => g.gamerName.toLowerCase() === gamerName.toLowerCase());
+                // First check the already-loaded allGamers array with CASE-SENSITIVE comparison
+                const existsInArray = allGamers.some(g => g.gamerName === gamerName);
                 if (existsInArray) return true;
                 
-                // If not found, query Firestore as backup
+                // If not found, query Firestore with CASE-SENSITIVE comparison
                 const q = query(
                     collection(db, 'members'),
                     where('gamerName', '==', gamerName)
@@ -2472,34 +2469,13 @@
                 // Clear previous error
                 loginError.style.display = 'none';
                 
-                // Try to find gamer in allGamers array
-                const gamer = allGamers.find(g => 
-                    g.gamerName.toLowerCase() === gamerName.trim().toLowerCase()
-                );
+                // Try to find gamer in allGamers array with CASE-SENSITIVE comparison
+                const gamer = allGamers.find(g => g.gamerName === gamerName.trim());
                 
                 if (!gamer) {
                     loginError.style.display = 'block';
                     showNotification('Error', `Gamer "${gamerName}" not found. Please check your name or register as a new user.`);
                     return false;
-                }
-                
-                // Check if gamer has pinHash (it might not be loaded in allGamers)
-                if (!gamer.pinHash) {
-                    // Need to fetch the complete gamer data with pinHash
-                    const q = query(
-                        collection(db, 'members'),
-                        where('gamerName', '==', gamer.gamerName)
-                    );
-                    const querySnapshot = await getDocs(q);
-                    
-                    if (querySnapshot.empty) {
-                        loginError.style.display = 'block';
-                        showNotification('Error', 'Gamer data not found. Please try again.');
-                        return false;
-                    }
-                    
-                    const gamerDoc = querySnapshot.docs[0];
-                    gamer.pinHash = gamerDoc.data().pinHash;
                 }
                 
                 const enteredPin = await showPinPrompt();
@@ -2556,9 +2532,6 @@
                 loginError.style.display = 'none';
                 updateNotificationStatus();
                 updateAdminControls();
-                
-                // Refresh gamers list to ensure data is current
-                await loadGamers();
                 
                 showNotification('Success', `Welcome back, ${currentUser.gamerName}!`);
                 return true;
