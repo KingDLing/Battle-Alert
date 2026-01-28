@@ -1422,8 +1422,7 @@
             getDocs,
             onSnapshot,
             limit,
-            writeBatch,
-            getDoc
+            writeBatch
         } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -1731,12 +1730,9 @@
             return;
         }
         
-       // Wait for service worker to be ready
-await navigator.serviceWorker.ready;
-console.log('Service Worker ready - scope:', serviceWorkerRegistration.scope);
-
-// IMPORTANT: Add this line to check service worker
-console.log('Current service worker:', await navigator.serviceWorker.getRegistration());
+        // Wait for service worker to be ready
+        await navigator.serviceWorker.ready;
+        console.log('Service Worker ready');
         
         // Import Firebase Messaging
         const { getMessaging, onMessage, isSupported, getToken } = await import(
@@ -1784,7 +1780,7 @@ console.log('Current service worker:', await navigator.serviceWorker.getRegistra
     try {
         if (!messagingInstance || !serviceWorkerRegistration) {
             console.log("FCM not initialized yet");
-            return null;
+            return;
         }
         
         const { getToken } = await import(
@@ -1792,35 +1788,27 @@ console.log('Current service worker:', await navigator.serviceWorker.getRegistra
         );
         
         const vapidKey = "BEwiF4gZjQM5OC8-G-NeTUh2Fadlr4f1w0VqRnhALtP-_RfQ4ewBYpscBEzyLSDi94yi5ixi3epQhsfKzd4-ghY";
-        
-        console.log('Getting FCM token with VAPID key:', vapidKey.substring(0, 20) + '...');
-        console.log('Service Worker registration:', serviceWorkerRegistration);
-
         const fcmToken = await getToken(messagingInstance, { 
             vapidKey,
             serviceWorkerRegistration: serviceWorkerRegistration
         });
         
-        if (!fcmToken) {
-            console.log("❌ No FCM token returned - check permissions");
-            return null;
+        if (fcmToken) {
+            console.log("✅ FCM Token obtained:", fcmToken);
+            localStorage.setItem('battleAlertFCMToken', fcmToken);
+            
+            // Save to ALL logged in users (fix for multiple devices)
+            if (currentUser) {
+                const userRef = doc(db, 'members', currentUser.id);
+                await updateDoc(userRef, {
+                    fcmToken: fcmToken,
+                    lastSeen: serverTimestamp()
+                });
+                console.log("✅ FCM Token saved to user:", currentUser.gamerName);
+            }
+            
+            return fcmToken;
         }
-        
-        console.log("✅ FCM Token obtained:", fcmToken);
-        localStorage.setItem('battleAlertFCMToken', fcmToken);
-        
-        // Save to ALL logged in users (fix for multiple devices)
-        if (currentUser) {
-            const userRef = doc(db, 'members', currentUser.id);
-            await updateDoc(userRef, {
-                fcmToken: fcmToken,
-                lastSeen: serverTimestamp()
-            });
-            console.log("✅ FCM Token saved to user:", currentUser.gamerName);
-        }
-        
-        return fcmToken;
-        
     } catch (error) {
         console.error('Error getting FCM token:', error);
         
@@ -1833,7 +1821,6 @@ console.log('Current service worker:', await navigator.serviceWorker.getRegistra
             console.log("Service worker not ready, retrying...");
             setTimeout(getAndStoreFCMToken, 1000);
         }
-        return null;
     }
 }
 async function initializeFCMForUser() {
@@ -2571,146 +2558,57 @@ return true;
             quickAlertMessage.value = '';
             quickAlertModal.style.display = 'flex';
         }
-// ============================================
-// ADD THIS FUNCTION RIGHT HERE
-// ============================================
-
-// Function to send push notification to a specific user
-async function sendPushNotification(recipientId, title, body, data = {}) {
-    try {
-        console.log('Sending push notification to:', recipientId);
-        
-        // Get recipient's FCM token from Firestore
-        const recipientRef = doc(db, 'members', recipientId);
-        const recipientDoc = await getDoc(recipientRef);
-        
-        if (!recipientDoc.exists()) {
-            console.error('Recipient not found:', recipientId);
-            return false;
-        }
-        
-        const recipientData = recipientDoc.data();
-        const fcmToken = recipientData.fcmToken;
-        
-        if (!fcmToken) {
-            console.error('No FCM token found for recipient:', recipientId);
-            return false;
-        }
-        
-        console.log('Recipient FCM token found:', fcmToken.substring(0, 20) + '...');
-        
-        // Notification payload
-        const notificationData = {
-            to: fcmToken,
-            notification: {
-                title: title,
-                body: body,
-                icon: 'https://cdn-icons-png.flaticon.com/512/1077/1077976.png',
-                click_action: 'https://kingdling.github.io/Battle-Alert/'
-            },
-            data: {
-                ...data,
-                url: 'https://kingdling.github.io/Battle-Alert/'
-            },
-            webpush: {
-                fcm_options: {
-                    link: 'https://kingdling.github.io/Battle-Alert/'
-                }
-            }
-        };
-        
-        console.log('Notification payload:', notificationData);
-        
-        // For now, just log what would be sent
-        showNotification('Info', `Push notification prepared for ${recipientData.gamerName}`);
-        
-        // TODO: Uncomment and configure when you have a backend
-        /*
-        const response = await fetch('https://YOUR-BACKEND-URL/send-notification', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(notificationData)
-        });
-        
-        if (!response.ok) {
-            throw new Error('Failed to send notification');
-        }
-        */
-        
-        return true;
-        
-    } catch (error) {
-        console.error('Error sending push notification:', error);
-        return false;
-    }
-}
 
         async function sendQuickAlert(gamerId, gamerName, alertType = null) {
-    if (!currentUser) {
-        showNotification('Error', 'Please login first');
-        openLoginBtn.click();
-        return;
-    }
-    
-    if (currentUser.id === gamerId) {
-        showNotification('Error', 'You cannot send an alert to yourself');
-        return;
-    }
-    
-    const finalAlertType = alertType || quickAlertType.value;
-    const message = quickAlertMessage.value.trim();
-    
-    if (!finalAlertType) {
-        showNotification('Error', 'Please select an alert type');
-        return;
-    }
-    
-    try {
-        const alertMessage = finalAlertType === 'attack' 
-            ? 'You are Under Attack!' + (message ? ` - ${message}` : '')
-            : 'Reinforcements Needed!' + (message ? ` - ${message}` : '');
-        
-        // Save alert to Firestore
-        await addDoc(collection(db, 'alerts'), {
-            type: finalAlertType,
-            message: alertMessage,
-            senderId: currentUser.id,
-            senderName: currentUser.gamerName,
-            recipientId: gamerId,
-            recipientName: gamerName,
-            createdAt: serverTimestamp(),
-            respondedAt: null,
-            alliance: currentUser.alliance
-        });
-
-        // Update recipient status
-        const recipientRef = doc(db, 'members', gamerId);
-        await updateDoc(recipientRef, {
-            status: 'under_attack',
-            lastAlert: serverTimestamp()
-        });
-
-        // Send push notification
-        const title = finalAlertType === 'attack' ? '🚨 Under Attack!' : '🛡️ Reinforcements Needed!';
-        await sendPushNotification(
-            gamerId,
-            title,
-            alertMessage,
-            {
-                type: finalAlertType,
-                senderName: currentUser.gamerName,
-                alertId: gamerId + Date.now()
+            if (!currentUser) {
+                showNotification('Error', 'Please login first');
+                openLoginBtn.click();
+                return;
             }
-        );
+            
+            if (currentUser.id === gamerId) {
+                showNotification('Error', 'You cannot send an alert to yourself');
+                return;
+            }
+            
+            const finalAlertType = alertType || quickAlertType.value;
+            const message = quickAlertMessage.value.trim();
+            
+            if (!finalAlertType) {
+                showNotification('Error', 'Please select an alert type');
+                return;
+            }
+            
+            try {
+                const alertMessage = finalAlertType === 'attack' 
+                    ? 'You are Under Attack!' + (message ? ` - ${message}` : '')
+                    : 'Reinforcements Needed!' + (message ? ` - ${message}` : '');
+                
+                await addDoc(collection(db, 'alerts'), {
+                    type: finalAlertType,
+                    message: alertMessage,
+                    senderId: currentUser.id,
+                    senderName: currentUser.gamerName,
+                    recipientId: gamerId,
+                    recipientName: gamerName,
+                    createdAt: serverTimestamp(),
+                    respondedAt: null,
+                    alliance: currentUser.alliance
+                });
 
-        showNotification('Success', `Alert sent to ${gamerName}!`);
-        quickAlertModal.style.display = 'none';
-        
-    } catch (error) {
-        console.error('Error sending alert:', error);
-        showNotification('Error', 'Failed to send alert');
-    }
-}
+                const recipientRef = doc(db, 'members', gamerId);
+                await updateDoc(recipientRef, {
+                    status: 'under_attack',
+                    lastAlert: serverTimestamp()
+                });
+
+                showNotification('Success', `Alert sent to ${gamerName}!`);
+                quickAlertModal.style.display = 'none';
+                
+            } catch (error) {
+                showNotification('Error', 'Failed to send alert');
+            }
+        }
 
         async function loadAlertLog() {
             try {
@@ -3594,41 +3492,21 @@ async function sendPushNotification(recipientId, title, body, data = {}) {
                     }
 
                     for (const recipient of recipients) {
-    const alertMessage = alertType === 'attack' 
-        ? 'You are Under Attack!' + (message ? ` - ${message}` : '')
-        : 'Reinforcements Needed!' + (message ? ` - ${message}` : '');
-    
-    await addDoc(collection(db, 'alerts'), {
-        type: alertType,
-        message: alertMessage,
-        senderId: currentUser.id,
-        senderName: currentUser.gamerName,
-        recipientId: recipient.id,
-        recipientName: recipient.gamerName,
-        createdAt: serverTimestamp(),
-        respondedAt: null,
-        alliance: recipient.alliance
-    });
-
-    const recipientRef = doc(db, 'members', recipient.id);
-    await updateDoc(recipientRef, {
-        status: 'under_attack',
-        lastAlert: serverTimestamp()
-    });
-
-    // Send push notification for each recipient
-    const title = alertType === 'attack' ? '🚨 Under Attack!' : '🛡️ Reinforcements Needed!';
-    await sendPushNotification(
-        recipient.id,
-        title,
-        alertMessage,
-        {
-            type: alertType,
-            senderName: currentUser.gamerName,
-            alertId: recipient.id + Date.now()
-        }
-    );
-}
+                        const alertMessage = alertType === 'attack' 
+                            ? 'You are Under Attack!' + (message ? ` - ${message}` : '')
+                            : 'Reinforcements Needed!' + (message ? ` - ${message}` : '');
+                        
+                        await addDoc(collection(db, 'alerts'), {
+                            type: alertType,
+                            message: alertMessage,
+                            senderId: currentUser.id,
+                            senderName: currentUser.gamerName,
+                            recipientId: recipient.id,
+                            recipientName: recipient.gamerName,
+                            createdAt: serverTimestamp(),
+                            respondedAt: null,
+                            alliance: recipient.alliance
+                        });
 
                         const recipientRef = doc(db, 'members', recipient.id);
                         await updateDoc(recipientRef, {
