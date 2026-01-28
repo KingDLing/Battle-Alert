@@ -1627,46 +1627,57 @@
         }
 
         document.addEventListener('DOMContentLoaded', async function() {
-            loadNotificationSettings();
-            showDeviceCompatibilityInfo();
+    loadNotificationSettings();
+    showDeviceCompatibilityInfo();
+    
+    // IMPORTANT: Load gamers FIRST before checking saved user
+    await loadGamers(); // ← Move this UP and make it await
+    
+    const savedUser = localStorage.getItem('battleAlertCurrentUser');
+    if (savedUser) {
+        try {
+            const userData = JSON.parse(savedUser);
             
-            const savedUser = localStorage.getItem('battleAlertCurrentUser');
-            if (savedUser) {
-                try {
-                    const userData = JSON.parse(savedUser);
-                    const userDoc = await getDocs(query(collection(db, 'members'), where('gamerName', '==', userData.gamerName)));
-                    if (!userDoc.empty) {
-                        const docSnapshot = userDoc.docs[0];
-                        currentUser = {
-                            id: docSnapshot.id,
-                            ...docSnapshot.data()
-                        };
-                        showUserInterface();
-                        showNotification('Welcome Back', `Welcome back, ${currentUser.gamerName}!`);
-                        updateNotificationStatus();
-                        updateAdminControls();
-                    } else {
-                        localStorage.removeItem('battleAlertCurrentUser');
-                        showGuestInterface();
-                    }
-                } catch (error) {
-                    console.error('Error loading saved user:', error);
-                    localStorage.removeItem('battleAlertCurrentUser');
-                    showGuestInterface();
-                }
+            // Check if user exists in the ALREADY LOADED allGamers array
+            const gamer = allGamers.find(g => g.gamerName === userData.gamerName && g.id === userData.id);
+            
+            if (gamer) {
+                // User found in allGamers array
+                currentUser = {
+                    id: gamer.id,
+                    gamerName: gamer.gamerName,
+                    alliance: gamer.alliance,
+                    totalAlerts: gamer.totalAlerts || 0,
+                    totalResponseTime: gamer.totalResponseTime || 0,
+                    status: gamer.status || 'safe'
+                };
+                
+                showUserInterface();
+                showNotification('Welcome Back', `Welcome back, ${currentUser.gamerName}!`);
+                updateNotificationStatus();
+                updateAdminControls();
             } else {
+                // User not found
+                localStorage.removeItem('battleAlertCurrentUser');
                 showGuestInterface();
             }
-            
-            await initializePushNotifications();
-            setupEventListeners();
-            loadGamers();
-            updateStats();
-            loadAlertLog();
-            
-            checkForActiveAlerts();
-            setupRealtimeUpdates();
-        });
+        } catch (error) {
+            console.error('Error loading saved user:', error);
+            localStorage.removeItem('battleAlertCurrentUser');
+            showGuestInterface();
+        }
+    } else {
+        showGuestInterface();
+    }
+    
+    await initializePushNotifications();
+    setupEventListeners();
+    updateStats();
+    loadAlertLog();
+    
+    checkForActiveAlerts();
+    setupRealtimeUpdates();
+});
 
         async function registerServiceWorker() {
             if ('serviceWorker' in navigator) {
