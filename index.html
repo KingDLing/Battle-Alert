@@ -1784,7 +1784,7 @@ console.log('Current service worker:', await navigator.serviceWorker.getRegistra
     try {
         if (!messagingInstance || !serviceWorkerRegistration) {
             console.log("FCM not initialized yet");
-            return;
+            return null;
         }
         
         const { getToken } = await import(
@@ -1792,42 +1792,35 @@ console.log('Current service worker:', await navigator.serviceWorker.getRegistra
         );
         
         const vapidKey = "BEwiF4gZjQM5OC8-G-NeTUh2Fadlr4f1w0VqRnhALtP-_RfQ4ewBYpscBEzyLSDi94yi5ixi3epQhsfKzd4-ghY";
-console.log('Getting FCM token with VAPID key:', vapidKey.substring(0, 20) + '...');
-console.log('Service Worker registration:', serviceWorkerRegistration);
-
-try {
-    const fcmToken = await getToken(messagingInstance, { 
-        vapidKey,
-        serviceWorkerRegistration: serviceWorkerRegistration
-    });
-    
-    if (fcmToken) {
-        console.log("✅ FCM Token obtained:", fcmToken);
-        // ... rest of your code
-    } else {
-        console.log("❌ No FCM token returned - check permissions");
-    }
-} catch (error) {
-    console.error("❌ Error in getToken:", error);
-    throw error; // Re-throw to be caught by outer try-catch
-}
         
-        if (fcmToken) {
-            console.log("✅ FCM Token obtained:", fcmToken);
-            localStorage.setItem('battleAlertFCMToken', fcmToken);
-            
-            // Save to ALL logged in users (fix for multiple devices)
-            if (currentUser) {
-                const userRef = doc(db, 'members', currentUser.id);
-                await updateDoc(userRef, {
-                    fcmToken: fcmToken,
-                    lastSeen: serverTimestamp()
-                });
-                console.log("✅ FCM Token saved to user:", currentUser.gamerName);
-            }
-            
-            return fcmToken;
+        console.log('Getting FCM token with VAPID key:', vapidKey.substring(0, 20) + '...');
+        console.log('Service Worker registration:', serviceWorkerRegistration);
+
+        const fcmToken = await getToken(messagingInstance, { 
+            vapidKey,
+            serviceWorkerRegistration: serviceWorkerRegistration
+        });
+        
+        if (!fcmToken) {
+            console.log("❌ No FCM token returned - check permissions");
+            return null;
         }
+        
+        console.log("✅ FCM Token obtained:", fcmToken);
+        localStorage.setItem('battleAlertFCMToken', fcmToken);
+        
+        // Save to ALL logged in users (fix for multiple devices)
+        if (currentUser) {
+            const userRef = doc(db, 'members', currentUser.id);
+            await updateDoc(userRef, {
+                fcmToken: fcmToken,
+                lastSeen: serverTimestamp()
+            });
+            console.log("✅ FCM Token saved to user:", currentUser.gamerName);
+        }
+        
+        return fcmToken;
+        
     } catch (error) {
         console.error('Error getting FCM token:', error);
         
@@ -1840,6 +1833,7 @@ try {
             console.log("Service worker not ready, retrying...");
             setTimeout(getAndStoreFCMToken, 1000);
         }
+        return null;
     }
 }
 async function initializeFCMForUser() {
