@@ -1789,9 +1789,14 @@
         
         async function getAndStoreFCMToken() {
     try {
-        if (!messagingInstance || !serviceWorkerRegistration) {
-            console.log("FCM not initialized yet");
-            return;
+        if (!messagingInstance) {
+            console.log("❌ Messaging instance not initialized");
+            return null;
+        }
+
+        if (!serviceWorkerRegistration) {
+            console.log("❌ Service worker not registered");
+            return null;
         }
         
         const { getToken } = await import(
@@ -1800,6 +1805,7 @@
         
         const vapidKey = "BI8-IxELLxL4C0MRfHTXiYXB2H1qJs-jgHOKHld9DDQ6qcW4aoFK8yqXtptUxAsLwtlqSDd1tcdzdrDWCvqHMGQ";
         
+        console.log("Getting FCM token...");
         const fcmToken = await getToken(messagingInstance, { 
             vapidKey,
             serviceWorkerRegistration: serviceWorkerRegistration
@@ -1811,29 +1817,34 @@
             
             // Save to current user if logged in
             if (currentUser) {
+                console.log("Saving token to user:", currentUser.gamerName);
                 const userRef = doc(db, 'members', currentUser.id);
                 await updateDoc(userRef, {
                     fcmToken: fcmToken,
                     lastTokenUpdate: serverTimestamp()
                 });
-                console.log("✅ FCM Token saved to user:", currentUser.gamerName);
+                console.log("✅ FCM Token saved to Firestore for user:", currentUser.gamerName);
+            } else {
+                console.log("⚠️ No current user - token saved to localStorage only");
             }
             
             return fcmToken;
         } else {
             console.error("❌ No FCM token received");
+            return null;
         }
     } catch (error) {
         console.error('❌ Error getting FCM token:', error);
+        console.error('Error code:', error.code);
+        console.error('Error message:', error.message);
         
         if (error.code === 'messaging/permission-blocked') {
             showDeviceSpecificMessage('Notifications blocked. Enable in browser settings.');
         } else if (error.code === 'messaging/unsupported-browser') {
             showDeviceSpecificMessage('Browser does not support push notifications.');
-        } else if (error.code === 'messaging/failed-service-worker-registration') {
-            console.log("Service worker not ready, retrying...");
-            setTimeout(getAndStoreFCMToken, 1000);
         }
+        
+        return null;
     }
 }
 async function initializeFCMForUser() {
@@ -1863,19 +1874,31 @@ return true;
 
 
 }
-        async function requestNotificationPermission() {
+       async function requestNotificationPermission() {
     try {
-        // First check current permission
+        // First check if user is logged in
+        if (!currentUser) {
+            showNotification('Error', 'Please login first before enabling notifications');
+            openLoginBtn.click();
+            return;
+        }
+
+        // Check current permission
         if (Notification.permission === 'granted') {
             showNotification('Already Enabled', 'Notifications are already enabled!');
-            enableExistingNotifications();
+            
+            // Still try to get and save token if we don't have one
+            const savedToken = localStorage.getItem('battleAlertFCMToken');
+            if (!savedToken) {
+                await getAndStoreFCMToken();
+            }
+            
+            updateNotificationStatus();
             return;
         }
         
         if (Notification.permission === 'denied') {
             showNotification('Blocked', 'Notifications were previously blocked. Please enable them in browser settings.');
-            
-            // Provide helpful instructions based on device
             const deviceInfo = detectDeviceInfo();
             let instructions = '';
             
@@ -1887,16 +1910,12 @@ return true;
                 instructions = 'Desktop: Click the lock icon in address bar > Site settings > Notifications > Allow';
             }
             
-            if (confirm(`Notifications blocked. ${instructions}\n\nOpen browser settings?`)) {
-                // Can't directly open settings, but we can guide them
-                showNotification('Settings Help', instructions);
-            }
+            showDeviceSpecificMessage(instructions);
             return;
         }
         
-        // Default state - request permission directly
+        // Request permission
         console.log("Requesting notification permission...");
-        
         const permission = await Notification.requestPermission();
         
         if (permission === 'granted') {
@@ -1905,7 +1924,15 @@ return true;
             showNotification('Success', 'Notifications enabled successfully!');
             
             // Get and store FCM token
-            await getAndStoreFCMToken();
+            const token = await getAndStoreFCMToken();
+            
+            if (token) {
+                console.log('✅ Token obtained and saved:', token);
+            } else {
+                console.error('❌ Failed to get token');
+                showNotification('Warning', 'Permission granted but token generation failed. Please try again.');
+            }
+            
             updateNotificationStatus();
             
             // Show test notification
@@ -1917,7 +1944,9 @@ return true;
                             icon: 'https://cdn-icons-png.flaticon.com/512/1077/1077976.png',
                             badge: 'https://cdn-icons-png.flaticon.com/512/1077/1077976.png'
                         });
-                    } catch (e) {}
+                    } catch (e) {
+                        console.error('Test notification failed:', e);
+                    }
                 }
             }, 1000);
             
@@ -1934,7 +1963,7 @@ return true;
         
     } catch (error) {
         console.error('Error requesting notification permission:', error);
-        showNotification('Error', 'Failed to enable notifications');
+        showNotification('Error', 'Failed to enable notifications: ' + error.message);
     }
 }
         
