@@ -1817,7 +1817,6 @@
     console.log('FCM Token obtained:', fcmToken);
     localStorage.setItem('battleAlertFCMToken', fcmToken);
     
-    // UNCOMMENT THIS - It saves tokens to Firestore!
     if (currentUser) {
         const userRef = doc(db, 'members', currentUser.id);
         await updateDoc(userRef, {
