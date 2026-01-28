@@ -2455,88 +2455,89 @@
         }
 
         async function loginUser(gamerName) {
-            if (!gamerName.trim()) {
-                showNotification('Error', 'Please enter a gamer name');
-                return false;
-            }
-            
-            if (pinAttempts >= MAX_PIN_ATTEMPTS) {
-                showNotification('Error', 'Too many failed attempts. Please try again later.');
-                return false;
-            }
-            
-            try {
-                const q = query(
-                    collection(db, 'members'),
-                    where('gamerName', '==', gamerName.trim())
-                );
-                
-                const querySnapshot = await getDocs(q);
-                
-                if (querySnapshot.empty) {
-                    loginError.style.display = 'block';
-                    showNotification('Error', `Gamer "${gamerName}" not found. Please check your name or register as a new user.`);
-                    return false;
-                }
-                
-                const docSnapshot = querySnapshot.docs[0];
-                const gamerData = docSnapshot.data();
-                
-                const enteredPin = await showPinPrompt();
-                if (!enteredPin) {
-                    return false;
-                }
-                
-                const isValidPin = await verifyPin(enteredPin, gamerData.pinHash);
-                
-                if (!isValidPin) {
-                    pinAttempts++;
-                    const remainingAttempts = MAX_PIN_ATTEMPTS - pinAttempts;
-                    if (remainingAttempts > 0) {
-                        showNotification('Error', `Invalid PIN. ${remainingAttempts} attempt(s) remaining.`);
-                    } else {
-                        showNotification('Error', 'Too many failed attempts. Please try again later.');
-                    }
-                    return false;
-                }
-                
-                pinAttempts = 0;
-                
-                currentUser = {
-                    id: docSnapshot.id,
-                    ...gamerData
-                };
-                const savedToken = localStorage.getItem('battleAlertFCMToken');
-    if (savedToken) {
-        const userRef = doc(db, 'members', currentUser.id);
-        await updateDoc(userRef, {
-            fcmToken: savedToken,
-            lastSeen: serverTimestamp()
-        });
+    if (!gamerName.trim()) {
+        showNotification('Error', 'Please enter a gamer name');
+        return false;
     }
-                delete currentUser.pinHash;
-                
-                localStorage.setItem('battleAlertCurrentUser', JSON.stringify({
-                    gamerName: currentUser.gamerName,
-                    id: currentUser.id
-                }));
-                
-                showUserInterface();
-                loginModal.style.display = 'none';
-                loginGamerNameInput.value = '';
-                loginError.style.display = 'none';
-                updateNotificationStatus();
-                updateAdminControls();
-                
-                showNotification('Success', `Welcome back, ${currentUser.gamerName}!`);
-                return true;
-                
-            } catch (error) {
-                console.error('Error logging in:', error);
-                showNotification('Error', 'Failed to login. Please try again.');
-                return false;
-            }
+    
+    if (pinAttempts >= MAX_PIN_ATTEMPTS) {
+        showNotification('Error', 'Too many failed attempts. Please try again later.');
+        return false;
+    }
+    
+    try {
+        // IMPORTANT: Check allGamers array first (already loaded!)
+        const gamer = allGamers.find(g => g.gamerName.toLowerCase() === gamerName.trim().toLowerCase());
+        
+        if (!gamer) {
+            loginError.style.display = 'block';
+            showNotification('Error', `Gamer "${gamerName}" not found. Please check your name or register as a new user.`);
+            return false;
         }
+        
+        // Found the gamer! Now verify PIN
+        const enteredPin = await showPinPrompt();
+        if (!enteredPin) {
+            return false;
+        }
+        
+        const isValidPin = await verifyPin(enteredPin, gamer.pinHash);
+        
+        if (!isValidPin) {
+            pinAttempts++;
+            const remainingAttempts = MAX_PIN_ATTEMPTS - pinAttempts;
+            if (remainingAttempts > 0) {
+                showNotification('Error', `Invalid PIN. ${remainingAttempts} attempt(s) remaining.`);
+            } else {
+                showNotification('Error', 'Too many failed attempts. Please try again later.');
+            }
+            return false;
+        }
+        
+        pinAttempts = 0;
+        
+        // Success! Set currentUser
+        currentUser = {
+            id: gamer.id,
+            gamerName: gamer.gamerName,
+            alliance: gamer.alliance,
+            totalAlerts: gamer.totalAlerts || 0,
+            totalResponseTime: gamer.totalResponseTime || 0,
+            status: gamer.status || 'safe'
+        };
+        
+        // Save FCM token if available
+        const savedToken = localStorage.getItem('battleAlertFCMToken');
+        if (savedToken) {
+            const userRef = doc(db, 'members', currentUser.id);
+            await updateDoc(userRef, {
+                fcmToken: savedToken,
+                lastSeen: serverTimestamp()
+            });
+        }
+        
+        // Save to localStorage
+        localStorage.setItem('battleAlertCurrentUser', JSON.stringify({
+            gamerName: currentUser.gamerName,
+            id: currentUser.id
+        }));
+        
+        showUserInterface();
+        loginModal.style.display = 'none';
+        loginGamerNameInput.value = '';
+        loginError.style.display = 'none';
+        updateNotificationStatus();
+        updateAdminControls();
+        
+        showNotification('Success', `Welcome back, ${currentUser.gamerName}!`);
+        return true;
+        
+    } catch (error) {
+        console.error('Error logging in:', error);
+        showNotification('Error', 'Failed to login. Please try again.');
+        return false;
+    }
+}
 
         function openQuickAlertModal(gamerId, gamerName) {
             if (!currentUser) {
@@ -3229,7 +3230,7 @@
             loginGamerNameInput.addEventListener('keypress', async (e) => {
                 if (e.key === 'Enter') {
                     const gamerName = loginGamerNameInput.value.trim();
-                    await loginUser(gamerName);
+                    //await loginUser(gamerName);
                 }
             });
 
