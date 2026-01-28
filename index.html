@@ -1627,57 +1627,61 @@
         }
 
         document.addEventListener('DOMContentLoaded', async function() {
-    loadNotificationSettings();
-    showDeviceCompatibilityInfo();
-    
-    // IMPORTANT: Load gamers FIRST before checking saved user
-    await loadGamers(); // ← Move this UP and make it await
-    
-    const savedUser = localStorage.getItem('battleAlertCurrentUser');
-    if (savedUser) {
-        try {
-            const userData = JSON.parse(savedUser);
+            loadNotificationSettings();
+            showDeviceCompatibilityInfo();
             
-            // Check if user exists in the ALREADY LOADED allGamers array
-            const gamer = allGamers.find(g => g.gamerName === userData.gamerName && g.id === userData.id);
-            
-            if (gamer) {
-                // User found in allGamers array
-                currentUser = {
-                    id: gamer.id,
-                    gamerName: gamer.gamerName,
-                    alliance: gamer.alliance,
-                    totalAlerts: gamer.totalAlerts || 0,
-                    totalResponseTime: gamer.totalResponseTime || 0,
-                    status: gamer.status || 'safe'
-                };
-                
-                showUserInterface();
-                showNotification('Welcome Back', `Welcome back, ${currentUser.gamerName}!`);
-                updateNotificationStatus();
-                updateAdminControls();
+            // Try to restore session from localStorage FIRST
+            const savedUser = localStorage.getItem('battleAlertCurrentUser');
+            if (savedUser) {
+                try {
+                    const userData = JSON.parse(savedUser);
+                    
+                    // Load gamers first to check if user exists
+                    await loadGamers();
+                    
+                    // Check if user exists in the loaded gamers array
+                    const gamer = allGamers.find(g => g.gamerName === userData.gamerName);
+                    
+                    if (gamer) {
+                        // User found - we need to verify they have access
+                        // We'll set currentUser but mark it as needing revalidation
+                        currentUser = {
+                            id: gamer.id,
+                            gamerName: gamer.gamerName,
+                            alliance: gamer.alliance,
+                            totalAlerts: gamer.totalAlerts || 0,
+                            totalResponseTime: gamer.totalResponseTime || 0,
+                            status: gamer.status || 'safe',
+                            needsRevalidation: true // Flag that user needs to re-enter PIN on next action
+                        };
+                        
+                        // Show user interface but don't allow actions until PIN is verified
+                        showUserInterface();
+                        showNotification('Welcome Back', `Welcome back, ${currentUser.gamerName}! Please verify your PIN for secure actions.`);
+                        updateNotificationStatus();
+                        updateAdminControls();
+                    } else {
+                        // User not found in database
+                        localStorage.removeItem('battleAlertCurrentUser');
+                        showGuestInterface();
+                    }
+                } catch (error) {
+                    console.error('Error loading saved user:', error);
+                    localStorage.removeItem('battleAlertCurrentUser');
+                    showGuestInterface();
+                }
             } else {
-                // User not found
-                localStorage.removeItem('battleAlertCurrentUser');
                 showGuestInterface();
             }
-        } catch (error) {
-            console.error('Error loading saved user:', error);
-            localStorage.removeItem('battleAlertCurrentUser');
-            showGuestInterface();
-        }
-    } else {
-        showGuestInterface();
-    }
-    
-    await initializePushNotifications();
-    setupEventListeners();
-    updateStats();
-    loadAlertLog();
-    
-    checkForActiveAlerts();
-    setupRealtimeUpdates();
-});
+            
+            await initializePushNotifications();
+            setupEventListeners();
+            updateStats();
+            loadAlertLog();
+            
+            checkForActiveAlerts();
+            setupRealtimeUpdates();
+        });
 
         async function registerServiceWorker() {
             if ('serviceWorker' in navigator) {
@@ -1825,17 +1829,17 @@
                 });
                 
                 if (fcmToken) {
-    console.log('FCM Token obtained:', fcmToken);
-    localStorage.setItem('battleAlertFCMToken', fcmToken);
-    
-    if (currentUser) {
-        const userRef = doc(db, 'members', currentUser.id);
-        await updateDoc(userRef, {
-            fcmToken: fcmToken,
-            lastSeen: serverTimestamp()
-        });
-    }
-}
+                    console.log('FCM Token obtained:', fcmToken);
+                    localStorage.setItem('battleAlertFCMToken', fcmToken);
+                    
+                    if (currentUser) {
+                        const userRef = doc(db, 'members', currentUser.id);
+                        await updateDoc(userRef, {
+                            fcmToken: fcmToken,
+                            lastSeen: serverTimestamp()
+                        });
+                    }
+                }
             } catch (error) {
                 console.error('Error getting FCM token:', error);
                 
@@ -2123,9 +2127,8 @@
                         ...docSnapshot.data()
                     };
                     
-                    if (gamer.pinHash) {
-                        delete gamer.pinHash;
-                    }
+                    // Don't delete pinHash - we need it for login verification
+                    // Keep it in the object but we won't expose it in the UI
                     
                     if (gamer.totalAlerts && gamer.totalAlerts > 0) {
                         gamer.avgResponseTime = gamer.totalResponseTime / gamer.totalAlerts;
@@ -2306,23 +2309,23 @@
         }
 
         async function checkGamerNameExists(gamerName) {
-    try {
-        // First check the already-loaded allGamers array
-        const existsInArray = allGamers.some(g => g.gamerName.toLowerCase() === gamerName.toLowerCase());
-        if (existsInArray) return true;
-        
-        // If not found, query Firestore as backup
-        const q = query(
-            collection(db, 'members'),
-            where('gamerName', '==', gamerName)
-        );
-        const querySnapshot = await getDocs(q);
-        return !querySnapshot.empty;
-    } catch (error) {
-        console.error('Error checking gamer name:', error);
-        return false;
-    }
-}
+            try {
+                // First check the already-loaded allGamers array
+                const existsInArray = allGamers.some(g => g.gamerName.toLowerCase() === gamerName.toLowerCase());
+                if (existsInArray) return true;
+                
+                // If not found, query Firestore as backup
+                const q = query(
+                    collection(db, 'members'),
+                    where('gamerName', '==', gamerName)
+                );
+                const querySnapshot = await getDocs(q);
+                return !querySnapshot.empty;
+            } catch (error) {
+                console.error('Error checking gamer name:', error);
+                return false;
+            }
+        }
 
         function showPinPrompt() {
             return new Promise((resolve) => {
@@ -2455,89 +2458,117 @@
         }
 
         async function loginUser(gamerName) {
-    if (!gamerName.trim()) {
-        showNotification('Error', 'Please enter a gamer name');
-        return false;
-    }
-    
-    if (pinAttempts >= MAX_PIN_ATTEMPTS) {
-        showNotification('Error', 'Too many failed attempts. Please try again later.');
-        return false;
-    }
-    
-    try {
-        // IMPORTANT: Check allGamers array first (already loaded!)
-        const gamer = allGamers.find(g => g.gamerName.toLowerCase() === gamerName.trim().toLowerCase());
-        
-        if (!gamer) {
-            loginError.style.display = 'block';
-            showNotification('Error', `Gamer "${gamerName}" not found. Please check your name or register as a new user.`);
-            return false;
-        }
-        
-        // Found the gamer! Now verify PIN
-        const enteredPin = await showPinPrompt();
-        if (!enteredPin) {
-            return false;
-        }
-        
-        const isValidPin = await verifyPin(enteredPin, gamer.pinHash);
-        
-        if (!isValidPin) {
-            pinAttempts++;
-            const remainingAttempts = MAX_PIN_ATTEMPTS - pinAttempts;
-            if (remainingAttempts > 0) {
-                showNotification('Error', `Invalid PIN. ${remainingAttempts} attempt(s) remaining.`);
-            } else {
-                showNotification('Error', 'Too many failed attempts. Please try again later.');
+            if (!gamerName.trim()) {
+                showNotification('Error', 'Please enter a gamer name');
+                return false;
             }
-            return false;
+            
+            if (pinAttempts >= MAX_PIN_ATTEMPTS) {
+                showNotification('Error', 'Too many failed attempts. Please try again later.');
+                return false;
+            }
+            
+            try {
+                // Clear previous error
+                loginError.style.display = 'none';
+                
+                // Try to find gamer in allGamers array
+                const gamer = allGamers.find(g => 
+                    g.gamerName.toLowerCase() === gamerName.trim().toLowerCase()
+                );
+                
+                if (!gamer) {
+                    loginError.style.display = 'block';
+                    showNotification('Error', `Gamer "${gamerName}" not found. Please check your name or register as a new user.`);
+                    return false;
+                }
+                
+                // Check if gamer has pinHash (it might not be loaded in allGamers)
+                if (!gamer.pinHash) {
+                    // Need to fetch the complete gamer data with pinHash
+                    const q = query(
+                        collection(db, 'members'),
+                        where('gamerName', '==', gamer.gamerName)
+                    );
+                    const querySnapshot = await getDocs(q);
+                    
+                    if (querySnapshot.empty) {
+                        loginError.style.display = 'block';
+                        showNotification('Error', 'Gamer data not found. Please try again.');
+                        return false;
+                    }
+                    
+                    const gamerDoc = querySnapshot.docs[0];
+                    gamer.pinHash = gamerDoc.data().pinHash;
+                }
+                
+                const enteredPin = await showPinPrompt();
+                if (!enteredPin) {
+                    return false;
+                }
+                
+                const isValidPin = await verifyPin(enteredPin, gamer.pinHash);
+                
+                if (!isValidPin) {
+                    pinAttempts++;
+                    const remainingAttempts = MAX_PIN_ATTEMPTS - pinAttempts;
+                    if (remainingAttempts > 0) {
+                        showNotification('Error', `Invalid PIN. ${remainingAttempts} attempt(s) remaining.`);
+                    } else {
+                        showNotification('Error', 'Too many failed attempts. Please try again later.');
+                    }
+                    return false;
+                }
+                
+                pinAttempts = 0;
+                
+                // Success! Set currentUser
+                currentUser = {
+                    id: gamer.id,
+                    gamerName: gamer.gamerName,
+                    alliance: gamer.alliance,
+                    totalAlerts: gamer.totalAlerts || 0,
+                    totalResponseTime: gamer.totalResponseTime || 0,
+                    status: gamer.status || 'safe'
+                };
+                
+                // Save FCM token if available
+                const savedToken = localStorage.getItem('battleAlertFCMToken');
+                if (savedToken) {
+                    const userRef = doc(db, 'members', currentUser.id);
+                    await updateDoc(userRef, {
+                        fcmToken: savedToken,
+                        lastSeen: serverTimestamp()
+                    });
+                }
+                
+                // Save to localStorage
+                localStorage.setItem('battleAlertCurrentUser', JSON.stringify({
+                    id: currentUser.id,
+                    gamerName: currentUser.gamerName,
+                    alliance: currentUser.alliance,
+                    lastLogin: new Date().toISOString()
+                }));
+                
+                showUserInterface();
+                loginModal.style.display = 'none';
+                loginGamerNameInput.value = '';
+                loginError.style.display = 'none';
+                updateNotificationStatus();
+                updateAdminControls();
+                
+                // Refresh gamers list to ensure data is current
+                await loadGamers();
+                
+                showNotification('Success', `Welcome back, ${currentUser.gamerName}!`);
+                return true;
+                
+            } catch (error) {
+                console.error('Error logging in:', error);
+                showNotification('Error', 'Failed to login. Please try again.');
+                return false;
+            }
         }
-        
-        pinAttempts = 0;
-        
-        // Success! Set currentUser
-        currentUser = {
-            id: gamer.id,
-            gamerName: gamer.gamerName,
-            alliance: gamer.alliance,
-            totalAlerts: gamer.totalAlerts || 0,
-            totalResponseTime: gamer.totalResponseTime || 0,
-            status: gamer.status || 'safe'
-        };
-        
-        // Save FCM token if available
-        const savedToken = localStorage.getItem('battleAlertFCMToken');
-        if (savedToken) {
-            const userRef = doc(db, 'members', currentUser.id);
-            await updateDoc(userRef, {
-                fcmToken: savedToken,
-                lastSeen: serverTimestamp()
-            });
-        }
-        
-        // Save to localStorage
-        localStorage.setItem('battleAlertCurrentUser', JSON.stringify({
-            gamerName: currentUser.gamerName,
-            id: currentUser.id
-        }));
-        
-        showUserInterface();
-        loginModal.style.display = 'none';
-        loginGamerNameInput.value = '';
-        loginError.style.display = 'none';
-        updateNotificationStatus();
-        updateAdminControls();
-        
-        showNotification('Success', `Welcome back, ${currentUser.gamerName}!`);
-        return true;
-        
-    } catch (error) {
-        console.error('Error logging in:', error);
-        showNotification('Error', 'Failed to login. Please try again.');
-        return false;
-    }
-}
 
         function openQuickAlertModal(gamerId, gamerName) {
             if (!currentUser) {
@@ -3230,7 +3261,7 @@
             loginGamerNameInput.addEventListener('keypress', async (e) => {
                 if (e.key === 'Enter') {
                     const gamerName = loginGamerNameInput.value.trim();
-                    //await loginUser(gamerName);
+                    await loginUser(gamerName);
                 }
             });
 
