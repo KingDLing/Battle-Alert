@@ -1693,12 +1693,26 @@
         async function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
         try {
-            // Register the actual firebase-messaging-sw.js file
-            serviceWorkerRegistration = await navigator.serviceWorker.register('firebase-messaging-sw.js');
-            console.log('Service Worker registered at scope:', serviceWorkerRegistration.scope);
+            // Unregister any existing service workers first
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            for (let registration of registrations) {
+                await registration.unregister();
+            }
+            
+            // Register new service worker
+            serviceWorkerRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+                scope: '/'
+            });
+            
+            console.log('✅ Service Worker registered:', serviceWorkerRegistration.scope);
+            
+            // Wait for it to be ready
+            await navigator.serviceWorker.ready;
+            console.log('✅ Service Worker is ready');
+            
             return serviceWorkerRegistration;
         } catch (error) {
-            console.error('Service Worker registration failed:', error);
+            console.error('❌ Service Worker registration failed:', error);
             return null;
         }
     }
@@ -1788,6 +1802,7 @@
         );
         
         const vapidKey = "BI8-IxELLxL4C0MRfHTXiYXB2H1qJs-jgHOKHld9DDQ6qcW4aoFK8yqXtptUxAsLwtlqSDd1tcdzdrDWCvqHMGQ";
+        
         const fcmToken = await getToken(messagingInstance, { 
             vapidKey,
             serviceWorkerRegistration: serviceWorkerRegistration
@@ -1797,22 +1812,23 @@
             console.log("✅ FCM Token obtained:", fcmToken);
             localStorage.setItem('battleAlertFCMToken', fcmToken);
             
-            // Save to ALL logged in users (fix for multiple devices)
+            // Save to current user if logged in
             if (currentUser) {
                 const userRef = doc(db, 'members', currentUser.id);
                 await updateDoc(userRef, {
                     fcmToken: fcmToken,
-                    lastSeen: serverTimestamp()
+                    lastTokenUpdate: serverTimestamp()
                 });
                 console.log("✅ FCM Token saved to user:", currentUser.gamerName);
             }
             
             return fcmToken;
+        } else {
+            console.error("❌ No FCM token received");
         }
     } catch (error) {
-        console.error('Error getting FCM token:', error);
+        console.error('❌ Error getting FCM token:', error);
         
-        // Handle specific errors
         if (error.code === 'messaging/permission-blocked') {
             showDeviceSpecificMessage('Notifications blocked. Enable in browser settings.');
         } else if (error.code === 'messaging/unsupported-browser') {
