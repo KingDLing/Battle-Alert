@@ -1777,39 +1777,79 @@
         }
         
         async function getAndStoreFCMToken() {
-            try {
-                if (!messagingInstance || !serviceWorkerRegistration) return;
-                
-                const { getToken } = await import(
-                    "https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging.js"
-                );
-                
-                const vapidKey = "BEwiF4gZjQM5OC8-G-NeTUh2Fadlr4f1w0VqRnhALtP-_RfQ4ewBYpscBEzyLSDi94yi5ixi3epQhsfKzd4-ghY";
-                const fcmToken = await getToken(messagingInstance, { 
-                    vapidKey,
-                    serviceWorkerRegistration: serviceWorkerRegistration
-                });
-                
-                if (fcmToken) {
-                    localStorage.setItem('battleAlertFCMToken', fcmToken);
-                    
-                    if (currentUser) {
-                        const userRef = doc(db, 'members', currentUser.id);
-                        await updateDoc(userRef, {
-                            fcmToken: fcmToken,
-                            lastSeen: serverTimestamp()
-                        });
-                    }
-                }
-            } catch (error) {
-                if (error.code === 'messaging/permission-blocked') {
-                    showDeviceSpecificMessage('Notifications blocked. Enable in browser settings.');
-                } else if (error.code === 'messaging/unsupported-browser') {
-                    showDeviceSpecificMessage('Browser does not support push notifications.');
-                }
-            }
+    try {
+        if (!messagingInstance || !serviceWorkerRegistration) {
+            console.log("FCM not initialized yet");
+            return;
         }
+        
+        const { getToken } = await import(
+            "https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging.js"
+        );
+        
+        const vapidKey = "BEwiF4gZjQM5OC8-G-NeTUh2Fadlr4f1w0VqRnhALtP-_RfQ4ewBYpscBEzyLSDi94yi5ixi3epQhsfKzd4-ghY";
+        const fcmToken = await getToken(messagingInstance, { 
+            vapidKey,
+            serviceWorkerRegistration: serviceWorkerRegistration
+        });
+        
+        if (fcmToken) {
+            console.log("✅ FCM Token obtained:", fcmToken);
+            localStorage.setItem('battleAlertFCMToken', fcmToken);
+            
+            // Save to ALL logged in users (fix for multiple devices)
+            if (currentUser) {
+                const userRef = doc(db, 'members', currentUser.id);
+                await updateDoc(userRef, {
+                    fcmToken: fcmToken,
+                    lastSeen: serverTimestamp()
+                });
+                console.log("✅ FCM Token saved to user:", currentUser.gamerName);
+            }
+            
+            return fcmToken;
+        }
+    } catch (error) {
+        console.error('Error getting FCM token:', error);
+        
+        // Handle specific errors
+        if (error.code === 'messaging/permission-blocked') {
+            showDeviceSpecificMessage('Notifications blocked. Enable in browser settings.');
+        } else if (error.code === 'messaging/unsupported-browser') {
+            showDeviceSpecificMessage('Browser does not support push notifications.');
+        } else if (error.code === 'messaging/failed-service-worker-registration') {
+            console.log("Service worker not ready, retrying...");
+            setTimeout(getAndStoreFCMToken, 1000);
+        }
+    }
+}
+async function initializeFCMForUser() {
+    if (!currentUser) {
+        console.log("No user logged in, skipping FCM init");
+        return;
+    }
+    
+    console.log("Initializing FCM for user:", currentUser.gamerName);
+    
+    // Wait for service worker to be ready
+    if (!serviceWorkerRegistration) {
+        console.log("Service worker not registered yet, waiting...");
+        setTimeout(initializeFCMForUser, 500);
+        return;
+    }
+    
+    // Get FCM token
+    const token = await getAndStoreFCMToken();
+    
+    if (token) {
+        showNotification('Notifications Ready', 'Push notifications are now enabled!');
+    setTimeout(initializeFCMForUser, 1000); // Wait 1 second then init FCM
 
+return true;
+}
+
+
+}
         async function requestNotificationPermission() {
     try {
         // First check current permission
