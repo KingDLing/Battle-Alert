@@ -1691,114 +1691,85 @@
         });
 
         async function registerServiceWorker() {
-            if ('serviceWorker' in navigator) {
-                try {
-                    const serviceWorkerScript = `
-                        self.addEventListener('install', (event) => {
-                            self.skipWaiting();
-                        });
-                        
-                        self.addEventListener('activate', (event) => {
-                            event.waitUntil(clients.claim());
-                        });
-                        
-                        importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js');
-                        importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js');
-                        
-                        firebase.initializeApp({
-                            apiKey: "AIzaSyAqqujNlqmiqlVKXz6WBxfgSXnHP8gIqIk",
-                            authDomain: "battle-alert.firebaseapp.com",
-                            projectId: "battle-alert",
-                            storageBucket: "battle-alert.firebasestorage.app",
-                            messagingSenderId: "724267211096",
-                            appId: "1:724267211096:web:8af6a8a63cf0eabb6bed2d"
-                        });
-                        
-                        const messaging = firebase.messaging();
-                        
-                        messaging.onBackgroundMessage((payload) => {
-                            const notificationTitle = payload.notification?.title || 'Battle Alert';
-                            const notificationOptions = {
-                                body: payload.notification?.body || 'New alert received',
-                                icon: 'https://cdn-icons-png.flaticon.com/512/1077/1077976.png',
-                                badge: 'https://cdn-icons-png.flaticon.com/512/1077/1077976.png'
-                            };
-                            
-                            self.registration.showNotification(notificationTitle, notificationOptions);
-                        });
-                    `;
-                    
-                    const blob = new Blob([serviceWorkerScript], { type: 'application/javascript' });
-                    const swUrl = URL.createObjectURL(blob);
-                    
-                    serviceWorkerRegistration = await navigator.serviceWorker.register(swUrl);
-                    
-                    URL.revokeObjectURL(swUrl);
-                    
-                    return serviceWorkerRegistration;
-                } catch (error) {
-                    return null;
-                }
-            }
+    if ('serviceWorker' in navigator) {
+        try {
+            // Register the actual firebase-messaging-sw.js file
+            serviceWorkerRegistration = await navigator.serviceWorker.register('firebase-messaging-sw.js');
+            console.log('Service Worker registered at scope:', serviceWorkerRegistration.scope);
+            return serviceWorkerRegistration;
+        } catch (error) {
+            console.error('Service Worker registration failed:', error);
             return null;
         }
+    }
+    return null;
+}
 
         async function initializePushNotifications() {
-            try {
-                if (!('Notification' in window)) {
-                    showDeviceSpecificMessage('This browser does not support notifications.');
-                    return;
-                }
-                
-                if (!('serviceWorker' in navigator)) {
-                    showDeviceSpecificMessage('Push notifications require Service Worker support.');
-                    return;
-                }
-                
-                if (!('PushManager' in window)) {
-                    showDeviceSpecificMessage('Push API is not supported in this browser.');
-                    return;
-                }
-                
-                const deviceInfo = detectDeviceInfo();
-                
-                await registerServiceWorker();
-                
-                const { getMessaging, onMessage, isSupported, getToken } = await import(
-                    "https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging.js"
+    try {
+        // Check basic support
+        if (!('Notification' in window)) {
+            console.log('Browser does not support notifications');
+            return;
+        }
+        
+        if (!('serviceWorker' in navigator)) {
+            console.log('Service Worker not supported');
+            return;
+        }
+        
+        if (!('PushManager' in window)) {
+            console.log('Push API not supported');
+            return;
+        }
+        
+        // Register service worker
+        serviceWorkerRegistration = await registerServiceWorker();
+        if (!serviceWorkerRegistration) {
+            console.log('Failed to register service worker');
+            return;
+        }
+        
+        // Wait for service worker to be ready
+        await navigator.serviceWorker.ready;
+        console.log('Service Worker ready');
+        
+        // Import Firebase Messaging
+        const { getMessaging, onMessage, isSupported, getToken } = await import(
+            "https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging.js"
+        );
+        
+        // Check if messaging is supported
+        const isMessagingSupported = await isSupported();
+        if (!isMessagingSupported) {
+            console.log('FCM not supported in this browser');
+            return;
+        }
+        
+        // Initialize messaging
+        messagingInstance = getMessaging(app);
+        
+        // Handle foreground messages
+        onMessage(messagingInstance, (payload) => {
+            console.log('Foreground message received:', payload);
+            if (payload.notification) {
+                showNotification(
+                    payload.notification.title || 'Battle Alert',
+                    payload.notification.body || 'New alert received'
                 );
                 
-                const isMessagingSupported = await isSupported();
-                if (!isMessagingSupported) {
-                    showDeviceSpecificMessage('Firebase Cloud Messaging is not supported.');
-                    return;
-                }
-                
-                messagingInstance = getMessaging(app);
-                
-                if (Notification.permission === 'default' && notificationsEnabled) {
-                    await requestNotificationPermission();
-                } else if (Notification.permission === 'granted' && notificationsEnabled) {
-                    await getAndStoreFCMToken();
-                }
-                
-                onMessage(messagingInstance, (payload) => {
-                    if (payload.notification && notificationsEnabled) {
-                        showNotification(
-                            payload.notification.title || 'Battle Alert',
-                            payload.notification.body || 'New alert received'
-                        );
-                        
-                        checkForActiveAlerts();
-                    }
-                });
-                
-                updateNotificationStatus();
-                
-            } catch (error) {
-                showDeviceSpecificMessage('Failed to initialize notifications. Check browser permissions.');
+                // Also check for active alerts in Firestore
+                checkForActiveAlerts();
             }
-        }
+        });
+        
+        console.log('FCM initialized successfully');
+        updateNotificationStatus();
+        
+    } catch (error) {
+        console.error('Error initializing push notifications:', error);
+    }
+}
         
         function showDeviceSpecificMessage(message) {
             deviceInfoText.textContent = message;
@@ -1806,39 +1777,79 @@
         }
         
         async function getAndStoreFCMToken() {
-            try {
-                if (!messagingInstance || !serviceWorkerRegistration) return;
-                
-                const { getToken } = await import(
-                    "https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging.js"
-                );
-                
-                const vapidKey = "BEwiF4gZjQM5OC8-G-NeTUh2Fadlr4f1w0VqRnhALtP-_RfQ4ewBYpscBEzyLSDi94yi5ixi3epQhsfKzd4-ghY";
-                const fcmToken = await getToken(messagingInstance, { 
-                    vapidKey,
-                    serviceWorkerRegistration: serviceWorkerRegistration
-                });
-                
-                if (fcmToken) {
-                    localStorage.setItem('battleAlertFCMToken', fcmToken);
-                    
-                    if (currentUser) {
-                        const userRef = doc(db, 'members', currentUser.id);
-                        await updateDoc(userRef, {
-                            fcmToken: fcmToken,
-                            lastSeen: serverTimestamp()
-                        });
-                    }
-                }
-            } catch (error) {
-                if (error.code === 'messaging/permission-blocked') {
-                    showDeviceSpecificMessage('Notifications blocked. Enable in browser settings.');
-                } else if (error.code === 'messaging/unsupported-browser') {
-                    showDeviceSpecificMessage('Browser does not support push notifications.');
-                }
-            }
+    try {
+        if (!messagingInstance || !serviceWorkerRegistration) {
+            console.log("FCM not initialized yet");
+            return;
         }
+        
+        const { getToken } = await import(
+            "https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging.js"
+        );
+        
+        const vapidKey = "BEwiF4gZjQM5OC8-G-NeTUh2Fadlr4f1w0VqRnhALtP-_RfQ4ewBYpscBEzyLSDi94yi5ixi3epQhsfKzd4-ghY";
+        const fcmToken = await getToken(messagingInstance, { 
+            vapidKey,
+            serviceWorkerRegistration: serviceWorkerRegistration
+        });
+        
+        if (fcmToken) {
+            console.log("✅ FCM Token obtained:", fcmToken);
+            localStorage.setItem('battleAlertFCMToken', fcmToken);
+            
+            // Save to ALL logged in users (fix for multiple devices)
+            if (currentUser) {
+                const userRef = doc(db, 'members', currentUser.id);
+                await updateDoc(userRef, {
+                    fcmToken: fcmToken,
+                    lastSeen: serverTimestamp()
+                });
+                console.log("✅ FCM Token saved to user:", currentUser.gamerName);
+            }
+            
+            return fcmToken;
+        }
+    } catch (error) {
+        console.error('Error getting FCM token:', error);
+        
+        // Handle specific errors
+        if (error.code === 'messaging/permission-blocked') {
+            showDeviceSpecificMessage('Notifications blocked. Enable in browser settings.');
+        } else if (error.code === 'messaging/unsupported-browser') {
+            showDeviceSpecificMessage('Browser does not support push notifications.');
+        } else if (error.code === 'messaging/failed-service-worker-registration') {
+            console.log("Service worker not ready, retrying...");
+            setTimeout(getAndStoreFCMToken, 1000);
+        }
+    }
+}
+async function initializeFCMForUser() {
+    if (!currentUser) {
+        console.log("No user logged in, skipping FCM init");
+        return;
+    }
+    
+    console.log("Initializing FCM for user:", currentUser.gamerName);
+    
+    // Wait for service worker to be ready
+    if (!serviceWorkerRegistration) {
+        console.log("Service worker not registered yet, waiting...");
+        setTimeout(initializeFCMForUser, 500);
+        return;
+    }
+    
+    // Get FCM token
+    const token = await getAndStoreFCMToken();
+    
+    if (token) {
+        showNotification('Notifications Ready', 'Push notifications are now enabled!');
+    setTimeout(initializeFCMForUser, 1000); // Wait 1 second then init FCM
 
+return true;
+}
+
+
+}
         async function requestNotificationPermission() {
     try {
         // First check current permission
