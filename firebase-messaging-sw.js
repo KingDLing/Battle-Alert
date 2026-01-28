@@ -2,7 +2,7 @@
 importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js');
 
-// USE YOUR NEW CONFIG - MUST MATCH INDEX.HTML
+
 firebase.initializeApp({
     apiKey: "AIzaSyBVnI6XN0eL6gKelJuVbYejmhlmYSl89RI",
     authDomain: "battle-alert-9db25.firebaseapp.com",
