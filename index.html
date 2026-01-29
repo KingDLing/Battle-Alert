@@ -1381,7 +1381,6 @@
                                 <th data-sort="status">Status <i class="fas fa-sort"></i></th>
                                 <th data-sort="alerts">Alerts <i class="fas fa-sort"></i></th>
                                 <th data-sort="response">Avg Response <i class="fas fa-sort"></i></th>
-                                <th>Quick Actions</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -2243,18 +2242,6 @@ return true;
                     <td>${totalAlerts}</td>
                     <td>${avgResponseTime}</td>
                     <td>
-                        ${currentUser && !isCurrentUser ? `
-                            <div class="quick-action-buttons">
-                                <button class="quick-action-btn quick-attack-btn" data-id="${gamer.id}" data-name="${gamer.gamerName}">
-                                    <i class="fas fa-crosshairs"></i> Attack
-                                </button>
-                                <button class="quick-action-btn quick-reinforce-btn" data-id="${gamer.id}" data-name="${gamer.gamerName}">
-                                    <i class="fas fa-shield-alt"></i> Reinforce
-                                </button>
-                            </div>
-                        ` : '-'}
-                    </td>
-                    <td>
                         <div class="action-buttons">
                             ${isCurrentUser ? `
                                 <button class="action-btn edit-btn" data-id="${gamer.id}">
@@ -2288,25 +2275,7 @@ return true;
                 });
             });
             
-            document.querySelectorAll('.quick-attack-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const gamerId = e.currentTarget.getAttribute('data-id');
-                    const gamerName = e.currentTarget.getAttribute('data-name');
-                    sendQuickAlert(gamerId, gamerName, 'attack');
-                });
-            });
-            
-            document.querySelectorAll('.quick-reinforce-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const gamerId = e.currentTarget.getAttribute('data-id');
-                    const gamerName = e.currentTarget.getAttribute('data-name');
-                    sendQuickAlert(gamerId, gamerName, 'reinforce');
-                });
-            });
-            
-            if (currentUser) {
+                if (currentUser) {
                 document.querySelectorAll('.edit-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         const gamerId = e.currentTarget.getAttribute('data-id');
