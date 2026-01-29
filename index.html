@@ -889,9 +889,9 @@
             margin-right: 5px;
         }
         
-        /* Embedded mode information */
+        /* Embedded mode warning */
         .embedded-warning {
-            background-color: rgba(255, 152, 0, 0.1);
+            background-color: rgba(255, 152, 0, 0.2);
             padding: 15px;
             border-radius: 5px;
             margin-bottom: 20px;
@@ -1247,15 +1247,11 @@
 
     <!-- MAIN APP -->
     <div class="container">
-        <!-- Embedded Mode Information Banner -->
+        <!-- Embedded Mode Warning Banner -->
         <div id="embedded-warning" class="embedded-warning" style="display: none;">
-            <h4><i class="fas fa-info-circle"></i> Using Battle Alert on Wix</h4>
-            <p>You're using Battle Alert embedded in our Wix site. Most features work here!</p>
-            <p>
-                <strong>Push notifications:</strong> Require one-time setup on 
-                <a href="https://kingdling.github.io/Battle-Alert/" target="_blank">GitHub Pages</a>.
-                After setup, they work on both sites.
-            </p>
+            <h4><i class="fas fa-info-circle"></i> Embedded Mode - Limited Features</h4>
+            <p>You're viewing Battle Alert in embedded mode. Some features like push notifications may not work fully.</p>
+            <p>For the best experience, <a href="https://kingdling.github.io/Battle-Alert/" target="_blank">open the standalone version</a>.</p>
         </div>
         
         <header>
@@ -1383,15 +1379,6 @@
             <!-- NOTIFICATION SETTINGS -->
             <div class="card">
                 <h2 class="card-title"><i class="fas fa-bell"></i> Notification Settings</h2>
-                
-                <!-- Embedded Notification Status -->
-                <div id="embedded-notification-status" style="display: none; margin-bottom: 15px;">
-                    <div class="device-info">
-                        <i class="fas fa-info-circle"></i>
-                        <span id="notification-status-text"></span>
-                    </div>
-                </div>
-                
                 <div id="notification-status-container"></div>
                 <div id="device-compatibility-info" class="device-info" style="display: none;">
                     <i class="fas fa-info-circle"></i>
@@ -1509,108 +1496,89 @@
 
         // ===== EMBEDDED MODE DETECTION =====
         const GITHUB_PAGES_URL = 'https://kingdling.github.io/Battle-Alert/';
-        const WIX_SITE_URL = 'https://csftroop.wixsite.com/csbm/battlealert';
         const isEmbedded = window.location.href.includes('wixsite.com') || 
                            window.location.href.includes('wix.com') ||
                            (window.location.origin !== 'https://kingdling.github.io');
 
-        // Check if user has already set up notifications on GitHub
-        function hasGitHubNotificationsSetup() {
-            // Check multiple indicators that notifications are set up
-            const hasFCMToken = localStorage.getItem('battleAlertFCMToken');
-            const notificationPermission = Notification.permission === 'granted';
-            const notificationsEnabled = localStorage.getItem('battleAlertNotificationsEnabled') === 'true';
-            
-            return hasFCMToken && notificationPermission && notificationsEnabled;
-        }
-
-        // Update embedded notification status display
-        function updateEmbeddedNotificationStatus() {
-            if (!isEmbedded) return;
-            
-            const statusElement = document.getElementById('embedded-notification-status');
-            const textElement = document.getElementById('notification-status-text');
-            
-            if (statusElement && textElement) {
-                statusElement.style.display = 'block';
+        // Helper function to check if we should redirect
+        function checkEmbeddedAndRedirect(action) {
+            if (isEmbedded) {
+                // Save what they were trying to do
+                localStorage.setItem('battleAlert_pendingAction', action);
+                localStorage.setItem('battleAlert_returnUrl', window.location.href);
                 
-                if (hasGitHubNotificationsSetup()) {
-                    textElement.innerHTML = `
-                        <strong>✅ Notifications set up!</strong> 
-                        Push notifications are enabled and will work on this site.
-                    `;
-                    statusElement.style.borderLeftColor = 'var(--success-green)';
-                    statusElement.style.backgroundColor = 'rgba(76, 175, 80, 0.1)';
-                } else {
-                    textElement.innerHTML = `
-                        <strong>ℹ️ One-time setup needed:</strong> 
-                        <a href="${GITHUB_PAGES_URL}" target="_blank" 
-                           style="color: var(--info-blue);">
-                            Visit GitHub Pages
-                        </a> to enable push notifications. Works on both sites after setup.
-                    `;
-                    statusElement.style.borderLeftColor = 'var(--info-blue)';
-                    statusElement.style.backgroundColor = 'rgba(33, 150, 243, 0.1)';
-                }
+                // Show the redirect modal
+                showRedirectModal(action);
+                return true; // Indicates we're in embedded mode
             }
+            return false;
         }
 
-        // Function for notification setup modal
-        function showNotificationSetupModal() {
+        // Function to show the redirect modal
+        function showRedirectModal(action) {
             const modal = document.createElement('div');
             modal.className = 'modal';
             modal.style.display = 'flex';
             modal.style.zIndex = '9999';
             
+            let actionText = '';
+            let icon = 'fas fa-external-link-alt';
+            
+            if (action === 'register') {
+                actionText = 'register a new account';
+                icon = 'fas fa-user-plus';
+            } else if (action === 'notifications') {
+                actionText = 'enable push notifications';
+                icon = 'fas fa-bell';
+            } else if (action === 'login') {
+                actionText = 'login to your account';
+                icon = 'fas fa-sign-in-alt';
+            } else {
+                actionText = 'use this feature';
+            }
+            
             modal.innerHTML = `
                 <div class="modal-content" style="max-width: 500px;">
-                    <h2 class="modal-title"><i class="fas fa-bell"></i> Enable Push Notifications</h2>
+                    <h2 class="modal-title"><i class="${icon}"></i> Open Full Version</h2>
                     <div style="text-align: center; padding: 20px;">
                         <div style="font-size: 3rem; color: var(--info-blue); margin-bottom: 20px;">
-                            <i class="fas fa-mobile-alt"></i>
+                            <i class="fas fa-external-link-square-alt"></i>
                         </div>
-                        <h3 style="color: var(--white); margin-bottom: 15px;">One-Time Setup Required</h3>
+                        <h3 style="color: var(--white); margin-bottom: 15px;">Enhanced Experience Available</h3>
                         <p style="color: var(--medium-gray); margin-bottom: 15px;">
-                            <strong>Push notifications require a one-time setup on GitHub Pages.</strong>
+                            To ${actionText} with full functionality including push notifications,
+                            please use the standalone version.
                         </p>
-                        
                         <div style="background-color: rgba(33, 150, 243, 0.1); padding: 15px; border-radius: 5px; 
-                             border-left: 4px solid var(--info-blue); margin: 20px 0; text-align: left;">
-                            <p style="color: var(--white); margin-bottom: 10px;">
-                                <i class="fas fa-info-circle"></i> <strong>How it works:</strong>
+                             border-left: 4px solid var(--info-blue); margin: 20px 0;">
+                            <p style="color: var(--white); margin-bottom: 5px;">
+                                <i class="fas fa-check-circle" style="color: var(--success-green);"></i>
+                                Your data will sync automatically
                             </p>
-                            <ol style="color: var(--light-gray); margin-left: 20px; padding-left: 0;">
-                                <li>Click below to open GitHub Pages</li>
-                                <li>Click "Enable Browser Notifications"</li>
-                                <li>Allow notifications in your browser</li>
-                                <li>Return here - notifications will work on both sites!</li>
-                            </ol>
+                            <p style="color: var(--white); margin-bottom: 5px;">
+                                <i class="fas fa-check-circle" style="color: var(--success-green);"></i>
+                                Push notifications will work on all devices
+                            </p>
+                            <p style="color: var(--white);">
+                                <i class="fas fa-check-circle" style="color: var(--success-green);"></i>
+                                You can return here afterwards
+                            </p>
                         </div>
-                        
-                        <p style="color: var(--medium-gray); margin-bottom: 20px;">
-                            You only need to do this once. After setup, notifications will work on both this Wix site and GitHub Pages.
-                        </p>
-                        
                         <div style="margin: 25px 0;">
                             <a href="${GITHUB_PAGES_URL}" target="_blank" 
                                class="form-btn form-btn-primary" 
                                style="display: inline-block; text-decoration: none; padding: 15px 30px; font-size: 1.1rem;">
-                                <i class="fas fa-external-link-alt"></i> Open GitHub Pages for Setup
+                                <i class="fas fa-external-link-alt"></i> Open Standalone Version
                             </a>
                         </div>
-                        
-                        <div style="margin-top: 20px;">
-                            <button class="form-btn form-btn-secondary" id="skip-notification-setup">
-                                <i class="fas fa-times"></i> Skip for Now
-                            </button>
-                        </div>
-                        
-                        <p style="color: var(--medium-gray); font-size: 0.9rem; margin-top: 20px;">
-                            <i class="fas fa-sync-alt"></i> Already set up notifications? 
-                            <a href="#" id="refresh-notification-status" style="color: var(--info-blue);">
-                                Click here to refresh
-                            </a>
+                        <p style="color: var(--medium-gray); font-size: 0.9rem;">
+                            <i class="fas fa-info-circle"></i> The standalone version has all features enabled.
                         </p>
+                    </div>
+                    <div class="form-actions">
+                        <button class="form-btn form-btn-secondary" id="close-embedded-modal">
+                            Continue in Embedded Mode (Limited)
+                        </button>
                     </div>
                 </div>
             `;
@@ -1619,20 +1587,8 @@
             
             // Close modal when clicking X or background
             modal.addEventListener('click', (e) => {
-                if (e.target === modal || e.target.id === 'skip-notification-setup') {
+                if (e.target === modal || e.target.id === 'close-embedded-modal') {
                     document.body.removeChild(modal);
-                }
-            });
-            
-            // Refresh notification status
-            document.getElementById('refresh-notification-status').addEventListener('click', (e) => {
-                e.preventDefault();
-                // Check if notifications are now set up
-                if (hasGitHubNotificationsSetup()) {
-                    showNotification('Success', 'Notifications detected! You can now enable them here.');
-                    document.body.removeChild(modal);
-                } else {
-                    showNotification('Info', 'Notifications not yet set up. Please visit GitHub Pages.');
                 }
             });
             
@@ -1887,6 +1843,72 @@
             
             checkForActiveAlerts();
             setupRealtimeUpdates();
+            
+            // ===== CHECK IF USER WAS REDIRECTED FROM WIX =====
+            const pendingAction = localStorage.getItem('battleAlert_pendingAction');
+            const returnUrl = localStorage.getItem('battleAlert_returnUrl');
+            
+            if (pendingAction && returnUrl) {
+                // Show welcome back message
+                setTimeout(() => {
+                    let actionMessage = '';
+                    switch(pendingAction) {
+                        case 'register':
+                            actionMessage = 'You can now register a new account here.';
+                            // Auto-open registration modal if not logged in
+                            if (!currentUser) {
+                                setTimeout(() => {
+                                    openRegistrationBtn.click();
+                                }, 500);
+                            }
+                            break;
+                        case 'notifications':
+                            actionMessage = 'You can now enable push notifications here.';
+                            // Auto-show notification settings
+                            setTimeout(() => {
+                                document.getElementById('enable-notifications-btn')?.scrollIntoView({behavior: 'smooth'});
+                            }, 500);
+                            break;
+                        case 'login':
+                            actionMessage = 'You can now login to your account here.';
+                            // Auto-open login modal if not logged in
+                            if (!currentUser) {
+                                setTimeout(() => {
+                                    openLoginBtn.click();
+                                }, 500);
+                            }
+                            break;
+                    }
+                    
+                    showNotification('Welcome from Wix Site', 
+                        `${actionMessage} Your data will sync back automatically.`);
+                    
+                    // Add a "Return to Wix" button
+                    if (returnUrl) {
+                        setTimeout(() => {
+                            const headerControls = document.querySelector('.header-controls');
+                            if (headerControls && !document.getElementById('return-to-wix-btn')) {
+                                const returnBtn = document.createElement('button');
+                                returnBtn.id = 'return-to-wix-btn';
+                                returnBtn.className = 'login-btn';
+                                returnBtn.innerHTML = '<i class="fas fa-arrow-left"></i> Return to Wix';
+                                returnBtn.style.marginLeft = '10px';
+                                returnBtn.onclick = () => {
+                                    window.open(returnUrl, '_blank');
+                                };
+                                headerControls.appendChild(returnBtn);
+                            }
+                        }, 1000);
+                    }
+                    
+                    // Clear the redirect flags after 5 minutes
+                    setTimeout(() => {
+                        localStorage.removeItem('battleAlert_pendingAction');
+                        localStorage.removeItem('battleAlert_returnUrl');
+                    }, 5 * 60 * 1000);
+                    
+                }, 1500);
+            }
         });
 
         async function registerServiceWorker() {
@@ -2313,7 +2335,6 @@
                 if (warningBanner) {
                     warningBanner.style.display = 'block';
                 }
-                updateEmbeddedNotificationStatus();
             }
             
             guestWelcome.style.display = 'none';
@@ -3372,19 +3393,22 @@
         }
 
         function setupEventListeners() {
-            // For login/register - NO redirect on Wix
-            openRegistrationBtn.addEventListener('click', (e) => {
-                registrationModal.style.display = 'flex';
-            });
-
             openLoginBtn.addEventListener('click', (e) => {
-                loginModal.style.display = 'flex';
-                loginGamerNameInput.focus();
+                if (checkEmbeddedAndRedirect('login')) {
+                    e.preventDefault();
+                } else {
+                    loginModal.style.display = 'flex';
+                    loginGamerNameInput.focus();
+                }
             });
 
             loginFromWelcomeBtn.addEventListener('click', (e) => {
-                loginModal.style.display = 'flex';
-                loginGamerNameInput.focus();
+                if (checkEmbeddedAndRedirect('login')) {
+                    e.preventDefault();
+                } else {
+                    loginModal.style.display = 'flex';
+                    loginGamerNameInput.focus();
+                }
             });
 
             cancelLoginBtn.addEventListener('click', () => {
@@ -3418,8 +3442,20 @@
                 registrationModal.style.display = 'flex';
             });
 
+            openRegistrationBtn.addEventListener('click', (e) => {
+                if (checkEmbeddedAndRedirect('register')) {
+                    e.preventDefault();
+                } else {
+                    registrationModal.style.display = 'flex';
+                }
+            });
+
             registerFromWelcomeBtn.addEventListener('click', (e) => {
-                registrationModal.style.display = 'flex';
+                if (checkEmbeddedAndRedirect('register')) {
+                    e.preventDefault();
+                } else {
+                    registrationModal.style.display = 'flex';
+                }
             });
 
             cancelRegistrationBtn.addEventListener('click', () => {
@@ -3959,11 +3995,9 @@
                 });
             });
 
-            // For notifications - check if setup is needed
             enableNotificationsBtn.addEventListener('click', (e) => {
-                if (isEmbedded && !hasGitHubNotificationsSetup()) {
+                if (checkEmbeddedAndRedirect('notifications')) {
                     e.preventDefault();
-                    showNotificationSetupModal();
                 } else {
                     requestNotificationPermission();
                 }
