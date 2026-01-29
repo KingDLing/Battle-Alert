@@ -2538,14 +2538,14 @@ async function initializeFCMForUser() {
                     lastLogin: new Date().toISOString()
                 }));
                 
-                showUserInterface();
+                                showUserInterface();
                 loginModal.style.display = 'none';
                 loginGamerNameInput.value = '';
                 loginError.style.display = 'none';
                 updateNotificationStatus();
                 updateAdminControls();
                 
-                s                showNotification('Success', `Welcome back, ${currentUser.gamerName}!`);
+                showNotification('Success', `Welcome back, ${currentUser.gamerName}!`);
                 
                 // Initialize FCM for the logged-in user
                 await initializeFCMForUser();
