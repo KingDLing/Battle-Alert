@@ -1873,12 +1873,8 @@ async function initializeFCMForUser() {
     
     if (token) {
         showNotification('Notifications Ready', 'Push notifications are now enabled!');
-    setTimeout(initializeFCMForUser, 1000); // Wait 1 second then init FCM
-
-return true;
-}
-
-
+        return true;
+    }
 }
        async function requestNotificationPermission() {
     try {
@@ -2549,7 +2545,11 @@ return true;
                 updateNotificationStatus();
                 updateAdminControls();
                 
-                showNotification('Success', `Welcome back, ${currentUser.gamerName}!`);
+                s                showNotification('Success', `Welcome back, ${currentUser.gamerName}!`);
+                
+                // Initialize FCM for the logged-in user
+                await initializeFCMForUser();
+                
                 return true;
                 
             } catch (error) {
