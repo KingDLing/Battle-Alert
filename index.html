@@ -442,7 +442,14 @@
         .vote-btn:hover {
             background-color: #f57c00;
         }
-        
+        .reset-btn {
+    background-color: var(--warning-orange);
+    color: var(--white);
+	}
+
+	.reset-btn:hover {
+    background-color: #f57c00;
+	}
         .status-indicator {
             display: inline-block;
             width: 10px;
@@ -1312,9 +1319,9 @@
                         <button class="action-btn clear-alerts-btn" id="clear-all-alerts-btn">
                             <i class="fas fa-trash-alt"></i> Clear All Alert Logs
                         </button>
-                        <button class="action-btn vote-btn" id="reset-stats-btn">
-                            <i class="fas fa-chart-line"></i> Reset Statistics
-                        </button>
+                        <button class="action-btn reset-btn" id="reset-stats-btn">
+    			    <i class="fas fa-chart-line"></i> Reset Statistics
+			</button>
                     </div>
                 </div>
             </div>
