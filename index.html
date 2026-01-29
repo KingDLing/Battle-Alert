@@ -1515,45 +1515,57 @@
                            (window.location.origin !== 'https://kingdling.github.io');
 
         // Check if user has already set up notifications on GitHub
-        function hasGitHubNotificationsSetup() {
-            // Check multiple indicators that notifications are set up
-            const hasFCMToken = localStorage.getItem('battleAlertFCMToken');
-            const notificationPermission = Notification.permission === 'granted';
-            const notificationsEnabled = localStorage.getItem('battleAlertNotificationsEnabled') === 'true';
-            
-            return hasFCMToken && notificationPermission && notificationsEnabled;
-        }
+function hasGitHubNotificationsSetup() {
+    // Check if FCM token exists (this is shared across domains via localStorage)
+    const hasFCMToken = localStorage.getItem('battleAlertFCMToken');
+    return hasFCMToken !== null;
+}
 
         // Update embedded notification status display
-        function updateEmbeddedNotificationStatus() {
-            if (!isEmbedded) return;
-            
-            const statusElement = document.getElementById('embedded-notification-status');
-            const textElement = document.getElementById('notification-status-text');
-            
-            if (statusElement && textElement) {
-                statusElement.style.display = 'block';
-                
-                if (hasGitHubNotificationsSetup()) {
-                    textElement.innerHTML = `
-                        <strong>✅ Notifications set up!</strong> 
-                        Push notifications are enabled and will work on this site.
-                    `;
-                    statusElement.style.borderLeftColor = 'var(--success-green)';
-                    statusElement.style.backgroundColor = 'rgba(76, 175, 80, 0.1)';
-                } else {
-                    textElement.innerHTML = `
-                        <strong>ℹ️ One-time setup needed:</strong> 
-                        <a href="${GITHUB_PAGES_URL}" target="_blank" 
-                           style="color: var(--info-blue);">
-                            Visit GitHub Pages
-                        </a> to enable push notifications. Works on both sites after setup.
-                    `;
-                    statusElement.style.borderLeftColor = 'var(--info-blue)';
-                    statusElement.style.backgroundColor = 'rgba(33, 150, 243, 0.1)';
-                }
-            }
+function updateEmbeddedNotificationStatus() {
+    if (!isEmbedded) return;
+    
+    const statusElement = document.getElementById('embedded-notification-status');
+    const textElement = document.getElementById('notification-status-text');
+    
+    if (statusElement && textElement) {
+        statusElement.style.display = 'block';
+        
+        const hasFCMToken = localStorage.getItem('battleAlertFCMToken');
+        
+        if (hasFCMToken) {
+            textElement.innerHTML = `
+                <strong>✅ GitHub Pages setup complete!</strong> 
+                FCM token detected. You can now enable notifications on this site.
+                <br><br>
+                <button onclick="requestNotificationPermission()" style="
+                    background: var(--info-blue); 
+                    color: white; 
+                    border: none; 
+                    padding: 8px 15px; 
+                    border-radius: 4px; 
+                    margin-top: 10px; 
+                    cursor: pointer;
+                    font-size: 0.9rem;
+                ">
+                    <i class="fas fa-bell"></i> Enable on This Site
+                </button>
+            `;
+            statusElement.style.borderLeftColor = 'var(--success-green)';
+            statusElement.style.backgroundColor = 'rgba(76, 175, 80, 0.1)';
+        } else {
+            textElement.innerHTML = `
+                <strong>ℹ️ One-time setup needed:</strong> 
+                <a href="${GITHUB_PAGES_URL}" target="_blank" 
+                   style="color: var(--info-blue);">
+                    Visit GitHub Pages
+                </a> to enable push notifications. Works on both sites after setup.
+            `;
+            statusElement.style.borderLeftColor = 'var(--info-blue)';
+            statusElement.style.backgroundColor = 'rgba(33, 150, 243, 0.1)';
         }
+    }
+}
 
         // Function for notification setup modal
         function showNotificationSetupModal() {
@@ -1587,9 +1599,10 @@
                             </ol>
                         </div>
                         
-                        <p style="color: var(--medium-gray); margin-bottom: 20px;">
-                            You only need to do this once. After setup, notifications will work on both this Wix site and GitHub Pages.
-                        </p>
+                        <<p style="color: var(--medium-gray); margin-bottom: 20px;">
+    You only need to do this once on GitHub Pages. After getting the FCM token, 
+    you'll need to allow notifications separately on this Wix site.
+</p>
                         
                         <div style="margin: 25px 0;">
                             <a href="${GITHUB_PAGES_URL}" target="_blank" 
@@ -1629,9 +1642,11 @@
                 e.preventDefault();
                 // Check if notifications are now set up
                 if (hasGitHubNotificationsSetup()) {
-                    showNotification('Success', 'Notifications detected! You can now enable them here.');
-                    document.body.removeChild(modal);
-                } else {
+    showNotification('Success', 'GitHub Pages setup detected! You may need to allow notifications on this site too.');
+    document.body.removeChild(modal);
+    // Refresh the status display
+    updateEmbeddedNotificationStatus();
+} else {
                     showNotification('Info', 'Notifications not yet set up. Please visit GitHub Pages.');
                 }
             });
@@ -3960,14 +3975,14 @@
             });
 
             // For notifications - check if setup is needed
-            enableNotificationsBtn.addEventListener('click', (e) => {
-                if (isEmbedded && !hasGitHubNotificationsSetup()) {
-                    e.preventDefault();
-                    showNotificationSetupModal();
-                } else {
-                    requestNotificationPermission();
-                }
-            });
+enableNotificationsBtn.addEventListener('click', (e) => {
+    if (isEmbedded && !localStorage.getItem('battleAlertFCMToken')) {
+        e.preventDefault();
+        showNotificationSetupModal();
+    } else {
+        requestNotificationPermission();
+    }
+});
             testNotificationBtn.addEventListener('click', testNotification);
         }
     </script>
