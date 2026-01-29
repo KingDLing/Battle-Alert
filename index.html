@@ -1795,7 +1795,15 @@
         }
         
         async function getAndStoreFCMToken() {
-    try {
+    	if (!serviceWorkerRegistration) {
+        console.log("🔄 Re-acquiring service worker registration");
+        serviceWorkerRegistration = await navigator.serviceWorker.getRegistration();
+        if (!serviceWorkerRegistration) {
+            console.error("❌ No service worker registration found");
+            return null;
+        }
+    }
+	try {
         if (!messagingInstance) {
             console.log("❌ Messaging instance not initialized");
             return null;
@@ -1861,7 +1869,15 @@ async function initializeFCMForUser() {
     }
     
     console.log("🔄 Initializing FCM for user:", currentUser.gamerName);
-    
+    if (!serviceWorkerRegistration) {
+        console.log("⚠️ Service worker lost, re-registering...");
+        serviceWorkerRegistration = await registerServiceWorker();
+        if (!serviceWorkerRegistration) {
+            console.error("❌ Failed to re-register service worker");
+            return;
+        }
+        console.log("✅ Service worker re-registered");
+    }
     // Check if user has a token in Firestore
     try {
         const userDoc = await getDoc(doc(db, 'members', currentUser.id));
@@ -3832,6 +3848,32 @@ async function sendTestPush() {
         alert("Test alert sent! Check for push notification.");
     }
 }
+</script>
+<button onclick="debugFCM()" 
+        style="position:fixed; top:80px; left:20px; background:purple; color:white; padding:10px; border-radius:5px; z-index:9999;">
+    🔧 DEBUG FCM
+</button>
+
+<script>
+async function debugFCM() {
+    console.log("=== FCM DEBUG INFO ===");
+    
+    // Check service worker
+    const sw = await navigator.serviceWorker.getRegistration();
+    console.log("Service Worker:", sw ? "Registered" : "Missing");
+    
+    // Check token
+    const token = localStorage.getItem('battleAlertFCMToken');
+    console.log("Token in localStorage:", token ? "Exists" : "Missing");
+    if (token) console.log("Token (first 30 chars):", token.substring(0, 30) + "...");
+    
+    // Check current user
+    console.log("Current User:", currentUser ? currentUser.gamerName : "None");
+    
+    alert(`Service Worker: ${sw ? "✅" : "❌"}\nToken: ${token ? "✅" : "❌"}\nUser: ${currentUser ? currentUser.gamerName : "None"}`);
+}
+// Make it available globally
+window.debugFCM = debugFCM;
 </script>
 </body>
 </html>
