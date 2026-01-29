@@ -1418,7 +1418,8 @@
             getFirestore, 
             collection, 
             addDoc, 
-            updateDoc, 
+            getDoc,
+	    updateDoc, 
             deleteDoc, 
             doc, 
             serverTimestamp,
@@ -1859,20 +1860,30 @@ async function initializeFCMForUser() {
         return;
     }
     
-    console.log("Initializing FCM for user:", currentUser.gamerName);
+    console.log("🔄 Initializing FCM for user:", currentUser.gamerName);
     
-    // Wait for service worker to be ready
-    if (!serviceWorkerRegistration) {
-        console.log("Service worker not registered yet, waiting...");
-        setTimeout(initializeFCMForUser, 500);
-        return;
+    // Check if user has a token in Firestore
+    try {
+        const userDoc = await getDoc(doc(db, 'members', currentUser.id));
+        const userData = userDoc.data();
+        
+        // If user has NO token or token is empty, force fresh token
+        if (!userData.fcmToken) {
+            console.log("⚠️ User has no FCM token in Firestore. Getting fresh token...");
+            await getAndStoreFCMToken();
+            return true;
+        }
+        
+        console.log("✅ User already has token in Firestore");
+    } catch (error) {
+        console.error("Error checking user token:", error);
     }
     
-    // Get FCM token
+    // Always try to get current token anyway (in case it changed)
     const token = await getAndStoreFCMToken();
     
     if (token) {
-        showNotification('Notifications Ready', 'Push notifications are now enabled!');
+        console.log("✅ FCM initialized for", currentUser.gamerName);
         return true;
     }
 }
