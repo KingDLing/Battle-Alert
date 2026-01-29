@@ -2904,7 +2904,7 @@
                         await deleteDoc(doc(db, 'members', gamerId));
                         
                         for (const vote of votes) {
-                            await deleteDoc(doc(db, 'votes', vote.id);
+                            await deleteDoc(doc(db, 'votes', vote.id));
                         }
                         
                         showNotification('System', `Gamer removed by community vote (5 votes in 24 hours)`);
