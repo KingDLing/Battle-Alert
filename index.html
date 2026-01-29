@@ -3791,6 +3791,36 @@ async function initializeFCMForUser() {
             enableNotificationsBtn.addEventListener('click', requestNotificationPermission);
             testNotificationBtn.addEventListener('click', testNotification);
         }
-    </script>
+   </script>
+	<!-- Add this button anywhere in your HTML -->
+<button onclick="sendTestPush()" 
+        style="position:fixed; bottom:20px; right:20px; background:#FF5722; color:white; padding:15px; border-radius:10px; z-index:9999;">
+    🔥 TEST PUSH
+</button>
+
+<script>
+async function sendTestPush() {
+    // Test 1: Check token
+    const token = localStorage.getItem('battleAlertFCMToken');
+    alert("Token: " + (token ? token.substring(0, 30) + "..." : "NO TOKEN"));
+    
+    // Test 2: Send test via your own Cloud Function
+    if (currentUser) {
+        // Create a test alert that will trigger Cloud Function
+        const testAlert = {
+            type: 'attack',
+            message: 'TEST PUSH NOTIFICATION',
+            senderId: currentUser.id,
+            senderName: currentUser.gamerName,
+            recipientId: currentUser.id, // Send to yourself
+            recipientName: currentUser.gamerName
+        };
+        
+        // Add to Firestore (this triggers Cloud Function)
+        const alertRef = await addDoc(collection(db, 'alerts'), testAlert);
+        alert("Test alert sent! Check for push notification.");
+    }
+}
+</script>
 </body>
 </html>
